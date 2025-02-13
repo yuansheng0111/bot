@@ -1,0 +1,11 @@
+chromedriver_autoinstaller_max
+ddddocr
+nodriver
+orjson
+Pillow
+playsound
+Requests
+selenium
+tornado
+undetected_chromedriver
+urllib3
