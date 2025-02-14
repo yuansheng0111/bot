@@ -7,13 +7,10 @@
 import argparse
 import base64
 import orjson
-# import json
 import logging
 import os
 import platform
-import random
 import ssl
-import subprocess
 import sys
 import threading
 import time
@@ -30,7 +27,6 @@ from selenium.common.exceptions import (NoAlertPresentException,
                                         WebDriverException)
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
@@ -46,7 +42,7 @@ except Exception as exc:
     print(exc)
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.04.19)"
+CONST_APP_VERSION = "MaxBot (2025.02.14)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -516,7 +512,8 @@ def load_chromdriver_uc(config_dict):
         fail_1 = False
         lanch_uc_with_path = True
         if "macos" in platform.platform().lower():
-            if "arm64" in platform.platform().lower():
+            # if "arm64" in platform.platform().lower():
+            if util.is_arm():
                 lanch_uc_with_path = False
 
         if lanch_uc_with_path:
@@ -671,7 +668,8 @@ def get_driver_by_config(config_dict):
             chromedriver_path = os.path.join(webdriver_path,"geckodriver.exe")
 
         if "macos" in platform.platform().lower():
-            if "arm64" in platform.platform().lower():
+            # if "arm64" in platform.platform().lower():
+            if util.is_arm():
                 chromedriver_path = os.path.join(webdriver_path,"geckodriver_arm")
 
         webdriver_service = Service(chromedriver_path)

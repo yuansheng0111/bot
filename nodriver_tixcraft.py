@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 #encoding=utf-8
 import argparse
-import base64
 import json
 import logging
 import os
 import pathlib
-import platform
-import random
 import ssl
-import subprocess
 import sys
 import threading
 import time
 import warnings
 import webbrowser
-from datetime import datetime
+import platform
 
 import nodriver as uc
 from nodriver import cdp
 from nodriver.core.config import Config
 from urllib3.exceptions import InsecureRequestWarning
-import urllib.parse
+
 
 import util
 from NonBrowser import NonBrowser
@@ -32,7 +28,7 @@ except Exception as exc:
     print(exc)
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.04.19)"
+CONST_APP_VERSION = "MaxBot (2025.02.14)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -1977,7 +1973,12 @@ def get_extension_config(config_dict):
     browser_args = get_nodriver_browser_args()
     if len(config_dict["advanced"]["proxy_server_port"]) > 2:
         browser_args.append('--proxy-server=%s' % config_dict["advanced"]["proxy_server_port"])
-    conf = Config(browser_args=browser_args, lang=default_lang, no_sandbox=no_sandbox, headless=config_dict["advanced"]["headless"])
+
+    if platform.system() == 'Darwin':
+        conf = Config(browser_executable_path="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser", browser_args=browser_args, lang=default_lang, no_sandbox=no_sandbox, headless=config_dict["advanced"]["headless"])
+    else:
+        conf = Config(browser_args=browser_args, lang=default_lang, no_sandbox=no_sandbox, headless=config_dict["advanced"]["headless"])
+
     if config_dict["advanced"]["chrome_extension"]:
         ext = get_maxbot_extension_path(CONST_MAXBOT_EXTENSION_NAME)
         if len(ext) > 0:

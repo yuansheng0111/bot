@@ -1,6 +1,5 @@
 import base64
 import orjson
-#import json
 import os
 import pathlib
 import platform
@@ -10,7 +9,9 @@ import socket
 import subprocess
 import sys
 import threading
+import datetime
 from typing import Optional
+from selenium.webdriver.common.by import By
 
 import requests
 
@@ -21,210 +22,185 @@ CONST_RANDOM = "random"
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-def get_ip_address():
-    gethostname = None
-    try:
-        gethostname = socket.gethostname()
-    except Exception as exc:
-        print("gethostname", exc)
-        gethostname = None
-
-    default_ip = "127.0.0.1"
-    ip = default_ip
-
-    check_public_ip = True    
-    if "macos" in platform.platform().lower():
-        if "arm64" in platform.platform().lower():
-            check_public_ip = False
-
-    if check_public_ip and not gethostname is None:
-        try:
-            ip = [l for l in ([ip for ip in socket.gethostbyname_ex(gethostname)[2]
-                if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)),
-                s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET,
-                socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-        except Exception as exc:
-            print("gethostbyname_ex", exc)
-            ip = gethostname
-    
-    #print("get_ip_address:", ip)
-    return ip
 
 def is_connectable(port: int, host: Optional[str] = "localhost") -> bool:
-    """Tries to connect to the server at port to see if it is running.
-
-    :Args:
-     - port - The port to connect.
     """
-    socket_ = None
-    _is_connectable_exceptions = (socket.error, ConnectionResetError)
-    try:
-        socket_ = socket.create_connection((host, port), 1)
-        result = True
-    except _is_connectable_exceptions:
-        result = False
-    finally:
-        if socket_:
-            socket_.close()
-    return result
+    Check if a socket at the given host and port is connectable.
 
-def remove_html_tags(text):
-    ret = ""
-    if not text is None:
-        clean = re.compile('<.*?>')
-        ret = re.sub(clean, '', text)
-        ret = ret.strip()
-    return ret
+    Args:
+        port (int): The port number to check.
+        host (Optional[str], optional): The host to check. Defaults to "localhost".
+
+    Returns:
+        bool: True if the port is connectable, False otherwise.
+    """
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except (socket.error, ConnectionResetError):
+        return False
+
+def remove_html_tags(text: str) -> str:
+    """
+    Remove HTML tags from a given text.
+
+    Args:
+        text (str): The text to remove HTML tags from.
+
+    Returns:
+        str: The text with all HTML tags removed.
+    """
+    if text is None:
+        return ""
+
+    html_tag_pattern = re.compile('<.*?>')
+    cleaned_text = re.sub(html_tag_pattern, '', text).strip()
+    
+    return cleaned_text
 
 # common functions.
-def find_between( s, first, last ):
-    ret = ""
+def find_between(input_string: str, start_string: str, end_string: str) -> str:
+    """
+    Find the string between two given strings.
+
+    Args:
+        input_string (str): The string to search in.
+        start_string (str): The string to start searching from.
+        end_string (str): The string to search until.
+
+    Returns:
+        str: The string between the two given strings.
+    """
     try:
-        start = s.index( first ) + len( first )
-        end = s.index( last, start )
-        ret = s[start:end]
+        start_index = input_string.index(start_string) + len(start_string)
+        end_index = input_string.index(end_string, start_index)
+        return input_string[start_index:end_index]
     except ValueError:
-        pass
-    return ret
+        return ""
 
-def sx(s1):
-    key=18
-    return ''.join(chr(ord(a) ^ key) for a in s1)
+def sx(input_string: str) -> str:
+    """
+    Perform XOR encryption/decryption on the given string with a fixed key.
 
-def decryptMe(b):
-    s=""
-    if(len(b)>0):
-        s=sx(base64.b64decode(b).decode("UTF-8"))
-    return s
+    Args:
+        input_string (str): The input string to be encrypted or decrypted.
 
-def encryptMe(s):
-    data=""
-    if(len(s)>0):
-        data=base64.b64encode(sx(s).encode('UTF-8')).decode("UTF-8")
-    return data
+    Returns:
+        str: The resulting string after applying XOR operation with the key.
+    """
+    xor_key = 18
+    return ''.join(chr(ord(char) ^ xor_key) for char in input_string)
 
-def is_arm():
-    ret = False
-    if "-arm" in platform.platform():
-        ret = True
-    return ret
+def decryptMe(encrypted_string: str) -> str:
+    decrypted_string = ""
+    if encrypted_string:
+        decrypted_string = sx(base64.b64decode(encrypted_string).decode("utf-8"))
+    return decrypted_string
 
-def get_app_root():
-    app_root = ""
+def encryptMe(plaintext: str) -> str:
+    ciphertext = ""
+    if plaintext:
+        ciphertext = base64.b64encode(sx(plaintext).encode("utf-8")).decode("utf-8")
+    return ciphertext
+
+def is_arm() -> bool:
+    return "-arm" in platform.platform()
+
+import os
+import sys
+
+def get_app_root() -> str:
+    """
+    Determine the root directory of the application.
+
+    If the application is frozen, the root directory is the parent directory
+    of the executable. Otherwise, it is the current working directory.
+
+    Returns:
+        str: The application's root directory.
+    """
     if hasattr(sys, 'frozen'):
-        basis = sys.executable
-        app_root = os.path.dirname(basis)
-    else:
-        app_root = os.getcwd()
-    return app_root
+        return os.path.dirname(sys.executable)
+    return os.getcwd()
 
 
-def format_config_keyword_for_json(user_input):
-    if len(user_input) > 0:
-        if not ('\"' in user_input):
-            user_input = '"' + user_input + '"'
+def format_config_keyword_for_json(config_keyword: str) -> str:
+    """
+    Format a string for use as a JSON keyword.
 
-        if user_input[:1]=="{" and user_input[-1:]=="}":
-            tmp_json = {}
-            try:
-                # tmp_json = json.loads(user_input)
-                tmp_json = orjson.loads(user_input)
-                key=list(tmp_json.keys())[0]
-                first_item=tmp_json[key]
-                # user_input=json.dumps(first_item)
-                user_input = orjson.dumps(first_item).decode('utf-8')
-            except Exception as exc:
-                pass
+    If the string is not a JSON object or array, it is returned unchanged.
+    If the string is a JSON object, the first item is extracted and returned as a string.
+    If the string is a JSON array, the first item is returned as a string.
 
-        if user_input[:1]=="[" and user_input[-1:]=="]":
-            user_input=user_input[1:]
-            user_input=user_input[:-1]
-    return user_input
+    Args:
+        config_keyword (str): The input string to be formatted.
 
-def is_text_match_keyword(keyword_string, text):
-    is_match_keyword = True
-    if len(keyword_string) > 0 and len(text) > 0:
-
-        # directly input text into arrray field.
-        if len(keyword_string) > 0:
-            if not '"' in keyword_string:
-                keyword_string = '"' + keyword_string + '"'
+    Returns:
+        str: The formatted string.
+    """
+    if not (config_keyword.startswith('"') and config_keyword.endswith('"')):
+        config_keyword = f'"{config_keyword}"'
         
-        is_match_keyword = False
-        keyword_array = []
-        try:
-            # keyword_array = json.loads("["+ keyword_string +"]")
-            keyword_array = orjson.loads("["+ keyword_string +"]")
-        except Exception as exc:
-            keyword_array = []
-        for item_list in keyword_array:
-            if len(item_list) > 0:
-                if ' ' in item_list:
-                    keyword_item_array = item_list.split(' ')
-                    is_match_all = True
-                    for each_item in keyword_item_array:
-                        if not each_item in text:
-                            is_match_all = False
-                    if is_match_all:
-                        is_match_keyword = True
-                else:
-                    if item_list in text:
-                        is_match_keyword = True
-            else:
-                is_match_keyword = True
-            if is_match_keyword:
-                break
-    return is_match_keyword
+    try:
+        json_data = orjson.loads(config_keyword)
+        if isinstance(json_data, dict) and json_data:
+            config_keyword = orjson.dumps(next(iter(json_data.values()))).decode('utf-8')
+        elif isinstance(json_data, list) and json_data:
+            config_keyword = orjson.dumps(json_data[0]).decode('utf-8')
+    except orjson.JSONDecodeError as e:
+        print(f"Invalid JSON format: {e}")
+
+    return config_keyword
+
+def is_text_match_keyword(keyword_string: str, text: str) -> bool:
+    """
+    Check if a given text matches any keyword in the keyword string.
+
+    The function parses the keyword string into an array of keywords and checks 
+    if any keyword or set of keywords (separated by spaces) is present in the text.
+
+    Args:
+        keyword_string (str): The string containing keywords to match.
+        text (str): The text to check against the keywords.
+
+    Returns:
+        bool: True if the text matches any keyword or set of keywords, False otherwise.
+    """
+    if not keyword_string or not text:
+        return False
+
+    if not (keyword_string.startswith('"') and keyword_string.endswith('"')):
+        keyword_string = f'"{keyword_string}"'
+
+    try:
+        keyword_list = orjson.loads(f"[{keyword_string}]")
+    except orjson.JSONDecodeError as e:
+        print(f"Invalid keyword string format: {e}")
+        return False
+
+    for keyword_group in keyword_list:
+        if not keyword_group:
+            return True
+
+        if ' ' in keyword_group:
+            if all(word in text for word in keyword_group.split()):
+                return True
+        elif keyword_group in text:
+            return True
+
+    return False
+
+def write_string_to_file(file_path: str, data: str) -> None:
+    with open(file_path, 'w', encoding='UTF-8') as file:
+        file.write(data)
+
 
 def save_json(config_dict, target_path):
-    print('\033[32mIn save_json()\033[0m')
-    # json_str = json.dumps(config_dict, indent=4)
-    json_str = orjson.dumps(config_dict).decode('utf-8')
-    print(f'json_str = {json_str}')
     try:
-        with open(target_path, 'w') as outfile:
-            outfile.write(json_str)
+        with open(target_path, 'wb') as outfile:
+            outfile.write(orjson.dumps(config_dict))
     except Exception as e:
-        pass
-
-def write_string_to_file(filename, data):
-    outfile = None
-    if platform.system() == 'Windows':
-        outfile = open(filename, 'w', encoding='UTF-8')
-    else:
-        outfile = open(filename, 'w')
-
-    if not outfile is None:
-        outfile.write("%s" % data)
-
-def save_url_to_file(remote_url, CONST_MAXBOT_ANSWER_ONLINE_FILE, force_write = False, timeout=0.5):
-    html_text = ""
-    if len(remote_url) > 0:
-        html_result = None
-        try:
-            html_result = requests.get(remote_url , timeout=timeout, allow_redirects=False)
-        except Exception as exc:
-            html_result = None
-            #print(exc)
-        if not html_result is None:
-            status_code = html_result.status_code
-            #print("status_code:", status_code)
-            if status_code == 200:
-                html_text = html_result.text
-                #print("html_text:", html_text)
-
-    is_write_to_file = False
-    if force_write:
-        is_write_to_file = True
-    if len(html_text) > 0:
-        is_write_to_file = True
-
-    if is_write_to_file:
-        html_text = format_config_keyword_for_json(html_text)
-        working_dir = os.path.dirname(os.path.realpath(__file__))
-        target_path = os.path.join(working_dir, CONST_MAXBOT_ANSWER_ONLINE_FILE)
-        write_string_to_file(target_path, html_text)
-    return is_write_to_file
+        print(f"Failed to write to {target_path}: {e}")
 
 
 def play_mp3_async(sound_filename):
@@ -245,154 +221,186 @@ def play_mp3(sound_filename):
                 pass
 
 
-def force_remove_file(filepath):
-    if os.path.exists(filepath):
+def force_remove_file(file_path):
+    if os.path.exists(file_path):
         try:
-            os.remove(filepath)
-        except Exception as exc:
-            pass
+            os.remove(file_path)
+        except Exception as e:
+            print(f'Failed to remove file {file_path}: {e}')
 
 
-def clean_uc_exe_cache():
-    exe_name = "chromedriver%s"
+def clean_uc_exe_cache() -> bool:
+    """
+    Clean up undetected-chromedriver's executable cache.
 
-    platform = sys.platform
-    if platform.endswith("win32"):
-        exe_name %= ".exe"
-    if platform.endswith(("linux", "linux2")):
-        exe_name %= ""
-    if platform.endswith("darwin"):
-        exe_name %= ""
+    Returns:
+        bool: True if the cache was found and cleaned up, False otherwise.
+    """
+    exe_name = "chromedriver"
+    if sys.platform.endswith("win32"):
+        exe_name += ".exe"
 
-    d = ""
-    if platform.endswith("win32"):
-        d = "~/appdata/roaming/undetected_chromedriver"
+    cache_dir = ""
+    if sys.platform.endswith("win32"):
+        cache_dir = "~/appdata/roaming/undetected_chromedriver"
     elif "LAMBDA_TASK_ROOT" in os.environ:
-        d = "/tmp/undetected_chromedriver"
-    elif platform.startswith(("linux", "linux2")):
-        d = "~/.local/share/undetected_chromedriver"
-    elif platform.endswith("darwin"):
-        d = "~/Library/Application Support/undetected_chromedriver"
+        cache_dir = "/tmp/undetected_chromedriver"
+    elif sys.platform.startswith(("linux", "linux2")):
+        cache_dir = "~/.local/share/undetected_chromedriver"
+    elif sys.platform.endswith("darwin"):
+        cache_dir = "~/Library/Application Support/undetected_chromedriver"
     else:
-        d = "~/.undetected_chromedriver"
-    data_path = os.path.abspath(os.path.expanduser(d))
+        cache_dir = "~/.undetected_chromedriver"
 
-    is_cache_exist = False
-    p = pathlib.Path(data_path)
-    files = list(p.rglob("*chromedriver*?"))
+    cache_dir = os.path.abspath(os.path.expanduser(cache_dir))
+    cache_path = pathlib.Path(cache_dir)
+
+    files = list(cache_path.rglob("*" + exe_name + "*"))
+    cache_found = bool(files)
+
     for file in files:
-        if os.path.exists(str(file)):
-            is_cache_exist = True
-            try:
-                os.unlink(str(file))
-            except Exception as exc2:
-                print(exc2)
-                pass
+        try:
+            os.unlink(str(file))
+        except Exception as e:
+            print(f"Error deleting {file}: {e}")
 
-    return is_cache_exist
+    return cache_found
 
-def t_or_f(arg):
-    ret = False
-    ua = str(arg).upper()
-    if 'TRUE'.startswith(ua):
-        ret = True
-    elif 'YES'.startswith(ua):
-        ret = True
-    return ret
+def t_or_f(value) -> bool:
+    value = str(value).strip().upper()
+    return 'TRUE'.startswith(value) or 'YES'.startswith(value)
 
-def format_keyword_string(keyword):
-    if not keyword is None:
-        if len(keyword) > 0:
-            keyword = keyword.replace('／','/')
-            keyword = keyword.replace('　','')
-            keyword = keyword.replace(',','')
-            keyword = keyword.replace('，','')
-            keyword = keyword.replace('$','')
-            keyword = keyword.replace(' ','').lower()
-    return keyword
+def format_keyword_string(input_string: str) -> str:
+    """Format a keyword string for comparison.
 
-def format_quota_string(formated_html_text):
-    formated_html_text = formated_html_text.replace('「','【')
-    formated_html_text = formated_html_text.replace('『','【')
-    formated_html_text = formated_html_text.replace('〔','【')
-    formated_html_text = formated_html_text.replace('﹝','【')
-    formated_html_text = formated_html_text.replace('〈','【')
-    formated_html_text = formated_html_text.replace('《','【')
-    formated_html_text = formated_html_text.replace('［','【')
-    formated_html_text = formated_html_text.replace('〖','【')
-    formated_html_text = formated_html_text.replace('[','【')
-    formated_html_text = formated_html_text.replace('（','【')
-    formated_html_text = formated_html_text.replace('(','【')
+    Replace full-width slash and comma with half-width ones, remove full-width
+    space, dollar sign, and convert to lower case.
 
-    formated_html_text = formated_html_text.replace('」','】')
-    formated_html_text = formated_html_text.replace('』','】')
-    formated_html_text = formated_html_text.replace('〕','】')
-    formated_html_text = formated_html_text.replace('﹞','】')
-    formated_html_text = formated_html_text.replace('〉','】')
-    formated_html_text = formated_html_text.replace('》','】')
-    formated_html_text = formated_html_text.replace('］','】')
-    formated_html_text = formated_html_text.replace('〗','】')
-    formated_html_text = formated_html_text.replace(']','】')
-    formated_html_text = formated_html_text.replace('）','】')
-    formated_html_text = formated_html_text.replace(')','】')
+    Args:
+        input_string (str): The keyword string to be formatted.
+
+    Returns:
+        str: The formatted keyword string.
+    """
+    if not input_string:
+        return ''
+
+    output_string = input_string.replace('／', '/')  # full-width slash
+    output_string = output_string.replace('　', '')  # full-width space
+    output_string = output_string.replace(',', '')  # full-width comma
+    output_string = output_string.replace('，', '')  # full-width comma
+    output_string = output_string.replace('$', '')  # dollar sign
+    output_string = output_string.replace(' ', '').lower()  # remove spaces and convert to lower case
+
+    return output_string
+
+
+def format_quota_string(formated_html_text: str) -> str:
+    """
+    Replace full-width and other special characters with half-width ones
+    for easier comparison.
+
+    Args:
+        formated_html_text (str): The string to be formatted.
+
+    Returns:
+        str: The formatted string.
+    """
+    # Replace full-width and other special characters with half-width ones
+    formated_html_text = formated_html_text.replace('「', '【')
+    formated_html_text = formated_html_text.replace('『', '【')
+    formated_html_text = formated_html_text.replace('〔', '【')
+    formated_html_text = formated_html_text.replace('﹝', '【')
+    formated_html_text = formated_html_text.replace('〈', '【')
+    formated_html_text = formated_html_text.replace('《', '【')
+    formated_html_text = formated_html_text.replace('［', '【')
+    formated_html_text = formated_html_text.replace('〖', '【')
+    formated_html_text = formated_html_text.replace('[', '【')
+    formated_html_text = formated_html_text.replace('（', '【')
+    formated_html_text = formated_html_text.replace('(', '【')
+
+    formated_html_text = formated_html_text.replace('」', '】')
+    formated_html_text = formated_html_text.replace('』', '】')
+    formated_html_text = formated_html_text.replace('〕', '】')
+    formated_html_text = formated_html_text.replace('﹞', '】')
+    formated_html_text = formated_html_text.replace('〉', '】')
+    formated_html_text = formated_html_text.replace('》', '】')
+    formated_html_text = formated_html_text.replace('］', '】')
+    formated_html_text = formated_html_text.replace('〗', '】')
+    formated_html_text = formated_html_text.replace(']', '】')
+    formated_html_text = formated_html_text.replace('）', '】')
+    formated_html_text = formated_html_text.replace(')', '】')
+
     return formated_html_text
 
-def full2half(keyword):
-    n = ""
-    if not keyword is None:
-        if len(keyword) > 0:
-            for char in keyword:
-                num = ord(char)
-                if num == 0x3000:
-                    num = 32
-                elif 0xFF01 <= num <= 0xFF5E:
-                    num -= 0xfee0
-                n += chr(num)
-    return n
+def full2half(text):
+    """
+    Convert a string from full-width to half-width characters.
+
+    This function is used to convert full-width characters commonly used in
+    Chinese, Japanese, and Korean texts to their half-width counterparts.
+    This is useful for comparing strings that may have different character
+    widths.
+
+    Args:
+        text (str): The string to be converted.
+        keyword (str): The string to be converted.
+
+    Returns:
+        str: The converted string.
+    """
+    if not text:
+        return ""
+
+    result = []
+    for char in text:
+        char_code = ord(char)
+        if char_code == 0x3000:  # full-width space
+            char_code = 32  # half-width space
+        elif 0xFF01 <= char_code <= 0xFF5E:  # full-width characters
+            char_code -= 0xfee0  # convert to half-width characters
+        result.append(chr(char_code))
+    return ''.join(result)
+
 
 def get_chinese_numeric():
-    my_dict = {}
-    my_dict['0']=['0','０','zero','零']
-    my_dict['1']=['1','１','one','一','壹','①','❶','⑴']
-    my_dict['2']=['2','２','two','二','貳','②','❷','⑵']
-    my_dict['3']=['3','３','three','三','叁','③','❸','⑶']
-    my_dict['4']=['4','４','four','四','肆','④','❹','⑷']
-    my_dict['5']=['5','５','five','五','伍','⑤','❺','⑸']
-    my_dict['6']=['6','６','six','六','陸','⑥','❻','⑹']
-    my_dict['7']=['7','７','seven','七','柒','⑦','❼','⑺']
-    my_dict['8']=['8','８','eight','八','捌','⑧','❽','⑻']
-    my_dict['9']=['9','９','nine','九','玖','⑨','❾','⑼']
-    return my_dict
+    chinese_numeric_map = {
+        '0': ['0', '０', 'zero', '零'],
+        '1': ['1', '１', 'one', '一', '壹', '①', '❶', '⑴'],
+        '2': ['2', '２', 'two', '二', '貳', '②', '❷', '⑵'],
+        '3': ['3', '３', 'three', '三', '叁', '③', '❸', '⑶'],
+        '4': ['4', '４', 'four', '四', '肆', '④', '❹', '⑷'],
+        '5': ['5', '５', 'five', '五', '伍', '⑤', '❺', '⑸'],
+        '6': ['6', '６', 'six', '六', '陸', '⑥', '❻', '⑹'],
+        '7': ['7', '７', 'seven', '七', '柒', '⑦', '❼', '⑺'],
+        '8': ['8', '８', 'eight', '八', '捌', '⑧', '❽', '⑻'],
+        '9': ['9', '９', 'nine', '九', '玖', '⑨', '❾', '⑼']
+    }
+    return chinese_numeric_map
 
-# 同義字
+# synonymous
 def synonym_dict(char):
-    ret = []
-    my_dict = get_chinese_numeric()
-    if char in my_dict:
-        ret = my_dict[char]
-    else:
-        ret.append(char)
-    return ret
+    chinese_numeric_map = get_chinese_numeric()
+    return chinese_numeric_map.get(char, [char])
 
-def chinese_numeric_to_int(char):
-    ret = None
-    my_dict = get_chinese_numeric()
-    for i in my_dict:
-        for item in my_dict[i]:
-            if char.lower() == item:
-                ret = int(i)
-                break
-        if not ret is None:
-            break
-    return ret
+
+def chinese_numeric_to_int(chinese_character):
+    chinese_character = chinese_character.lower()  # Convert once before loop
+    chinese_to_int = get_chinese_numeric()
+    
+    for int_value, chinese_characters in chinese_to_int.items():
+        if chinese_character in chinese_characters:
+            return int(int_value)
+    
+    return None
 
 def normalize_chinese_numeric(keyword):
-    ret = ""
+    normalized_numerals = []
     for char in keyword:
-        converted_int =  chinese_numeric_to_int(char)
-        if not converted_int is None:
-            ret += str(converted_int)
-    return ret
+        converted_int = chinese_numeric_to_int(char)
+        if converted_int is not None:
+            normalized_numerals.append(str(converted_int))
+    return ''.join(normalized_numerals)
 
 def find_continuous_number(text):
     chars = "0123456789"
@@ -402,60 +410,63 @@ def find_continuous_text(text):
     chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     return find_continuous_pattern(chars, text)
 
-def find_continuous_pattern(allowed_char, text):
-    ret = ""
-    is_allowed_char_start = False
+def find_continuous_pattern(allowed_characters, text):
+    """
+    Find continuous pattern of allowed characters in text.
+
+    Args:
+        allowed_characters (str): The allowed characters.
+        text (str): The text to search in.
+
+    Returns:
+        str: The continuous pattern of allowed characters.
+    """
+    pattern = []
     for char in text:
-        #print("char:", char)
-        if char in allowed_char:
-            if len(ret)==0 and not is_allowed_char_start:
-                is_allowed_char_start = True
-            if is_allowed_char_start:
-                ret += char
-        else:
-            # make not continuous
-            is_allowed_char_start = False
-    return ret
+        if char in allowed_characters:
+            pattern.append(char)
+        elif pattern:  # stop if the first invalid character is encountered after some valid ones
+            break
+    return ''.join(pattern)
 
-def is_all_alpha_or_numeric(text):
-    ret = False
-    alpha_count = 0
-    numeric_count = 0
-    for char in text:
-        try:
-            if char.encode('UTF-8').isalpha():
-                alpha_count += 1
-        except Exception as exc:
-            pass
+def is_all_alpha_or_numeric(text: str) -> bool:
+    return text.isalnum()
+    # alpha_count = 0
+    # numeric_count = 0
+    # for char in text:
+    #     try:
+    #         if char.encode('UTF-8').isalpha():
+    #             alpha_count += 1
+    #     except Exception as exc:
+    #         pass
 
-        #if char.isnumeric():
-        if char.isdigit():
-            numeric_count += 1
+    #     #if char.isnumeric():
+    #     if char.isdigit():
+    #         numeric_count += 1
 
-    if (alpha_count + numeric_count) == len(text):
-        ret = True
+    # return (alpha_count + numeric_count) == len(text)
 
-    #print("text/is_all_alpha_or_numeric:",text,ret)
-    return ret
+def get_brave_bin_path() -> str:
+    system = platform.system()
 
-def get_brave_bin_path():
-    brave_path = ""
-    if platform.system() == 'Windows':
-        brave_path = "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-        if not os.path.exists(brave_path):
-            brave_path = os.path.expanduser('~') + "\\AppData\\Local\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-        if not os.path.exists(brave_path):
-            brave_path = "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-        if not os.path.exists(brave_path):
-            brave_path = "D:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+    if system == 'Windows':
+        paths = [
+            "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+            os.path.expanduser('~') + "\\AppData\\Local\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+            "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+            "D:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+        ]
+        for path in paths:
+            if os.path.exists(path):
+                return path
 
-    if platform.system() == 'Linux':
-        brave_path = "/usr/bin/brave-browser"
+    elif system == 'Linux':
+        return "/usr/bin/brave-browser"
 
-    if platform.system() == 'Darwin':
-        brave_path = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
+    elif system == 'Darwin':
+        return '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
 
-    return brave_path
+    return ""
 
 
 def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG_FILE):

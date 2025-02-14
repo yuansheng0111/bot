@@ -14,29 +14,13 @@ from tornado.web import Application
 from tornado.web import StaticFileHandler
 
 import util
-# from typing import (
-#     Dict,
-#     Any,
-#     Union,
-#     Optional,
-#     Awaitable,
-#     Tuple,
-#     List,
-#     Callable,
-#     Iterable,
-#     Generator,
-#     Type,
-#     TypeVar,
-#     cast,
-#     overload,
-# )
 
 try:
     import ddddocr
 except Exception as exc:
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.04.19)"
+CONST_APP_VERSION = "MaxBot (2025.02.14)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -54,7 +38,7 @@ CONST_CENTER = "center"
 CONST_RANDOM = "random"
 CONST_SELECT_ORDER_DEFAULT = CONST_RANDOM
 CONST_EXCLUDE_DEFAULT = "\"輪椅\",\"身障\",\"身心 障礙\",\"Restricted View\",\"燈柱遮蔽\",\"視線不完整\""
-CONST_CAPTCHA_SOUND_FILENAME_DEFAULT = "ding-dong.wav"
+CONST_CAPTCHA_SOUND_FILENAME_DEFAULT = "assets/ding-dong.wav"
 CONST_HOMEPAGE_DEFAULT = "about:blank"
 
 CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER = "NonBrowser"

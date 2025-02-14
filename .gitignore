@@ -2,3 +2,7 @@
 
 *.pyc
 **/__pycache__/
+
+**/settings.json
+MAXBOT_LAST_URL.txt
+test.*
