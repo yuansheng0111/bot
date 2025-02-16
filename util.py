@@ -14,6 +14,10 @@ from typing import Optional
 from selenium.webdriver.common.by import By
 
 import requests
+from typing import (
+    Dict,
+    Any
+)
 
 CONST_FROM_TOP_TO_BOTTOM = "from top to bottom"
 CONST_FROM_BOTTOM_TO_TOP = "from bottom to top"
@@ -483,8 +487,6 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
             pass
 
     try:
-        # with open(target_path, 'w') as outfile:
-        #     json.dump(config_dict, outfile)
         with open(target_path, 'wb') as outfile:
             outfile.write(orjson.dumps(config_dict))
     except Exception as e:
@@ -497,8 +499,6 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
     manifest_dict = None
     if os.path.isfile(target_path):
         try:
-            # with open(target_path) as json_data:
-            #     manifest_dict = json.load(json_data)
             with open(target_path, 'rb') as json_data:
                 manifest_dict = orjson.loads(json_data.read())
         except Exception as e:
@@ -537,75 +537,77 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
                 pass
 
 
-def dump_settings_to_maxblock_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG_FILE, CONST_MAXBLOCK_EXTENSION_FILTER):
-    # sync config.
-    target_path = ext
-    target_path = os.path.join(target_path, "data")
-    # special case, due to data folder is empty, sometime will be removed.
-    if not os.path.exists(target_path):
-        os.mkdir(target_path)
-    target_path = os.path.join(target_path, CONST_MAXBOT_CONFIG_FILE)
-    #print("save as to:", target_path)
-    if os.path.isfile(target_path):
-        try:
-            #print("remove file:", target_path)
-            os.unlink(target_path)
-        except Exception as exc:
-            pass
+def dump_settings_to_maxblock_plus_extension(
+    ext: str, config_dict: Dict[str, Any], CONST_MAXBOT_CONFIG_FILE: str, CONST_MAXBLOCK_EXTENSION_FILTER: str
+) -> None:
+    """
+    Syncs the configuration to the MaxBlock Plus extension.
+
+    This function writes the `config_dict` to a file at the specified `ext` path,
+    and adds a domain filter to the `config_dict` before writing.
+
+    Args:
+        ext (str): The extension path where data should be saved.
+        config_dict (Dict[str, Any]): The configuration dictionary to be saved.
+        CONST_MAXBOT_CONFIG_FILE (str): The name of the configuration file.
+        CONST_MAXBLOCK_EXTENSION_FILTER (str): The domain filter to be added to the config.
+
+    Returns:
+        None
+    """
+    data_path = os.path.join(ext, "data")
+    os.makedirs(data_path, exist_ok=True)  # Ensure directory exists
+
+    config_file_path = os.path.join(data_path, CONST_MAXBOT_CONFIG_FILE)
 
     try:
-        # with open(target_path, 'w') as outfile:
-        #     config_dict["domain_filter"]=CONST_MAXBLOCK_EXTENSION_FILTER
-        #     json.dump(config_dict, outfile)
-        with open(target_path, 'wb') as outfile:
-            config_dict["domain_filter"]=CONST_MAXBLOCK_EXTENSION_FILTER
-            # json.dump(config_dict, outfile)
+        config_file_path.unlink(missing_ok=True)  # Delete file if it exists (Python 3.8+)
+    except Exception as err:
+        print(f"Error removing file {config_file_path}: {err}")
+
+    try:
+        config_dict["domain_filter"] = CONST_MAXBLOCK_EXTENSION_FILTER
+        with open(config_file_path, 'wb') as outfile:
             outfile.write(orjson.dumps(config_dict))
-    except Exception as e:
-        pass
+    except Exception as err:
+        print(f"Error writing to {config_file_path}: {err}")
+
 
 # convert web string to reg pattern
-def convert_string_to_pattern(my_str, dynamic_length=True):
-    my_hint_anwser_length = len(my_str)
-    my_formated = ""
-    if my_hint_anwser_length > 0:
-        my_anwser_symbols = "()[]<>{}-"
-        for idx in range(my_hint_anwser_length):
-            char = my_str[idx:idx+1]
+def convert_string_to_pattern(input_string: str, dynamic_length: bool = True) -> str:
+    """
+    Convert a string to a regular expression pattern.
 
-            if char in my_anwser_symbols:
-                my_formated += ('\\' + char)
-                continue
+    Args:
+        input_string (str): The string to convert.
+        dynamic_length (bool, optional): Whether to make the pattern match strings of dynamic length. Defaults to True.
 
-            pattern = re.compile("[A-Z]")
-            match_result = pattern.match(char)
-            #print("match_result A:", match_result)
-            if not match_result is None:
-                my_formated += "[A-Z]"
+    Returns:
+        str: The converted regular expression pattern.
+    """
+    special_chars = "[]{}()<>-"
+    output_list = []
 
-            pattern = re.compile("[a-z]")
-            match_result = pattern.match(char)
-            #print("match_result a:", match_result)
-            if not match_result is None:
-                my_formated += "[a-z]"
+    for char in input_string:
+        if char in special_chars:
+            output_list.append(f"\\{char}")
+        elif char.isupper():
+            output_list.append("[A-Z]")
+        elif char.islower():
+            output_list.append("[a-z]")
+        elif char.isdigit():
+            output_list.append("[\d]")  # No extra backslash needed
 
-            pattern = re.compile("[\d]")
-            match_result = pattern.match(char)
-            #print("match_result d:", match_result)
-            if not match_result is None:
-                my_formated += "[\d]"
+    output_string = "".join(output_list)
 
-        # for dynamic length
-        if dynamic_length:
-            for i in range(10):
-                my_formated = my_formated.replace("[A-Z][A-Z]","[A-Z]")
-                my_formated = my_formated.replace("[a-z][a-z]","[a-z]")
-                my_formated = my_formated.replace("[\d][\d]","[\d]")
+    if dynamic_length:
+        # Use regex to replace repeated patterns dynamically
+        output_string = re.sub(r"(\[A-Z\])\1+", r"\1+", output_string)
+        output_string = re.sub(r"(\[a-z\])\1+", r"\1+", output_string)
+        output_string = re.sub(r"(\[\d\])\1+", r"\1+", output_string)
 
-            my_formated = my_formated.replace("[A-Z]","[A-Z]+")
-            my_formated = my_formated.replace("[a-z]","[a-z]+")
-            my_formated = my_formated.replace("[\d]","[\d]+")
-    return my_formated
+    return output_string
+
 
 def guess_answer_list_from_multi_options(tmp_text):
     show_debug_message = True    # debug.
@@ -1109,77 +1111,74 @@ def guess_answer_list_from_hint(CONST_EXAMPLE_SYMBOL, CONST_INPUT_SYMBOL, captch
 
     return return_list, offical_hint_string_anwser
 
+
 def format_question_string(CONST_EXAMPLE_SYMBOL, CONST_INPUT_SYMBOL, captcha_text_div_text):
-    tmp_text = captcha_text_div_text
-    tmp_text = tmp_text.replace('  ',' ')
-    tmp_text = tmp_text.replace('：',':')
-    # for hint
-    tmp_text = tmp_text.replace('*','*')
+    """
+    Formats the given captcha text by replacing certain characters and phrases
+    with specified symbols and removing unnecessary words.
 
-    # stop word.
-    tmp_text = tmp_text.replace('輸入法','')
-    tmp_text = tmp_text.replace('請問','')
-    tmp_text = tmp_text.replace('請將','')
-    tmp_text = tmp_text.replace('請在','')
-    tmp_text = tmp_text.replace('請以','')
-    tmp_text = tmp_text.replace('請回答','')
-    tmp_text = tmp_text.replace('請','')
+    Args:
+        example_symbol (str): The symbol to replace example indicators.
+        input_symbol (str): The symbol to replace input indicators.
+        text (str): The text to format.
 
-    # replace ex.
-    tmp_text = tmp_text.replace('例如', CONST_EXAMPLE_SYMBOL)
-    tmp_text = tmp_text.replace('如:', CONST_EXAMPLE_SYMBOL)
-    tmp_text = tmp_text.replace('如為', CONST_EXAMPLE_SYMBOL+'為')
+    Returns:
+        str: The formatted text.
+    """
+    if not captcha_text_div_text:
+        return captcha_text_div_text
 
-    tmp_text = tmp_text.replace('舉例', CONST_EXAMPLE_SYMBOL)
-    if not CONST_EXAMPLE_SYMBOL in tmp_text:
-        tmp_text = tmp_text.replace('例', CONST_EXAMPLE_SYMBOL)
-    # important, maybe 例 & ex occurs at same time.
-    tmp_text = tmp_text.replace('ex:', CONST_EXAMPLE_SYMBOL)
-    tmp_text = tmp_text.replace('Ex:', CONST_EXAMPLE_SYMBOL)
+    text = re.sub(r'\s+', ' ', captcha_text_div_text.strip())
 
-    #若你覺得
-    #PS:這個，可能會造成更多問題，呵呵。
-    SYMBOL_IF_LIST = ['假設','如果','若']
-    for symbol_if in SYMBOL_IF_LIST:
-        if symbol_if in tmp_text and '答案' in tmp_text:
-            tmp_text = tmp_text.replace('覺得', '')
-            tmp_text = tmp_text.replace('認為', '')
-            tmp_text = tmp_text.replace(symbol_if + '你答案', CONST_EXAMPLE_SYMBOL + '答案')
-            tmp_text = tmp_text.replace(symbol_if + '答案', CONST_EXAMPLE_SYMBOL + '答案')
+    # Replace double spaces and specific characters
+    text = text.translate(str.maketrans({'：': ':', '？': '?', '（': '(', '）': ')'}))
 
-    tmp_text = tmp_text.replace('填入', CONST_INPUT_SYMBOL)
+    # Remove stopped words
+    stop_words = ['輸入法', '請問', '請將', '請在', '請以', '請回答', '請']
+    text = re.sub('|'.join(stop_words), '', text)
 
-    #tmp_text = tmp_text.replace('[','(')
-    #tmp_text = tmp_text.replace(']',')')
-    tmp_text = tmp_text.replace('？','?')
+    # Replace example indicators
+    example_phrases = ['例如', '如:', '如為', '舉例', '例', 'ex:', 'Ex:']
+    text = re.sub('|'.join(example_phrases), CONST_EXAMPLE_SYMBOL, text)
 
-    tmp_text = tmp_text.replace('（','(')
-    tmp_text = tmp_text.replace('）',')')
+    # Replace conditional phrases related to answers
+    conditional_phrases = ['假設', '如果', '若']
+    if '答案' in text:
+        text = re.sub(r'覺得|認為', '', text)
+        for phrase in conditional_phrases:
+            text = text.replace(f'{phrase}你答案', f'{CONST_EXAMPLE_SYMBOL}答案')
+            text = text.replace(f'{phrase}答案', f'{CONST_EXAMPLE_SYMBOL}答案')
 
-    return tmp_text
+    # Replace input indicators
+    text = text.replace('填入', CONST_INPUT_SYMBOL)
+
+    return text
 
 def permutations(iterable, r=None):
-    pool = tuple(iterable)
-    n = len(pool)
-    r = n if r is None else r
-    if r > n:
-        return
-    indices = list(range(n))
-    cycles = list(range(n, n-r, -1))
-    yield tuple(pool[i] for i in indices[:r])
-    while n:
-        for i in reversed(range(r)):
-            cycles[i] -= 1
-            if cycles[i] == 0:
-                indices[i:] = indices[i+1:] + indices[i:i+1]
-                cycles[i] = n - i
-            else:
-                j = cycles[i]
-                indices[i], indices[-j] = indices[-j], indices[i]
-                yield tuple(pool[i] for i in indices[:r])
-                break
-        else:
-            return
+    """
+    Generate permutations of an iterable.
+
+    Args:
+        iterable (iterable): The input iterable to generate permutations from.
+        r (int, optional): The length of each permutation tuple. Defaults to the length of the iterable.
+
+    Example:
+        >>> for perm in permutations([1, 2, 3]):
+        ...     print(perm)
+        (1, 2, 3)
+        (1, 3, 2)
+        (2, 1, 3)
+        (2, 3, 1)
+        (3, 1, 2)
+        (3, 2, 1)
+
+    If r is None, generate permutations of the full length of the iterable.
+    """
+    if r is None:
+        r = len(iterable)
+
+    from itertools import permutations
+    return permutations(iterable, r)
 
 def get_answer_list_by_question(CONST_EXAMPLE_SYMBOL, CONST_INPUT_SYMBOL, captcha_text_div_text):
     show_debug_message = True    # debug.
