@@ -435,20 +435,6 @@ def find_continuous_pattern(allowed_characters, text):
 
 def is_all_alpha_or_numeric(text: str) -> bool:
     return text.isalnum()
-    # alpha_count = 0
-    # numeric_count = 0
-    # for char in text:
-    #     try:
-    #         if char.encode('UTF-8').isalpha():
-    #             alpha_count += 1
-    #     except Exception as exc:
-    #         pass
-
-    #     #if char.isnumeric():
-    #     if char.isdigit():
-    #         numeric_count += 1
-
-    # return (alpha_count + numeric_count) == len(text)
 
 def get_brave_bin_path() -> str:
     system = platform.system()
