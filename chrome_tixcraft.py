@@ -1756,6 +1756,7 @@ def fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_li
 
     if config_dict["advanced"]["verbose"]:
         show_debug_message = True
+    print(f'\033[32mExecute chrome_tixcraft.py line 1759 fill_common_verify_form()\033[0m')
 
     form_input_list = []
     try:
@@ -1959,6 +1960,7 @@ def tixcraft_toast(driver, message):
 def tixcraft_keyin_captcha_code(driver, answer = "", auto_submit = False):
     is_verifyCode_editing = False
     is_form_sumbited = False
+    print(f'\033[32mExecute chrome_tixcraft.py line 1962 tixcraft_keyin_captcha_code()\033[0m')
 
     # manually keyin verify code.
     # start to input verify code.
@@ -2002,16 +2004,20 @@ def tixcraft_keyin_captcha_code(driver, answer = "", auto_submit = False):
                     pass
 
             if len(answer) > 0:
-                #print("start to fill answer.")
+                print(f"start to fill answer. answer: {answer}")
                 try:
-                    form_verifyCode.clear()
+                    # form_verifyCode.clear()
+                    print("send_keys ocr answer.")
                     form_verifyCode.send_keys(answer)
+                    print("send_keys ocr answer done.")
 
                     if auto_submit:
+                        print("auto submit.")
                         form_verifyCode.send_keys(Keys.ENTER)
                         is_verifyCode_editing = False
                         is_form_sumbited = True
                     else:
+                        print("script submit.")
                         driver.execute_script("document.getElementById(\"TicketForm_verifyCode\").select();")
                         tixcraft_toast(driver, "※ 按 Enter 如果答案是: " + answer)
                 except Exception as exc:
@@ -2057,6 +2063,7 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
                 image_element = driver.find_elements(By.CSS_SELECTOR, my_css_selector)
             except Exception as exc:
                 pass
+            
 
             if not image_element is None:
                 if 'indievox.com' in domain_name:
@@ -2098,8 +2105,8 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
 #PS: credit to LinShihJhang's share
 def tixcraft_auto_ocr(driver, ocr, away_from_keyboard_enable, previous_answer, Captcha_Browser, ocr_captcha_image_source, domain_name):
     show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
+    # show_debug_message = False      # online
+    print(f'\033[32mExecute chrome_tixcraft.py line 2107 tixcraft_auto_ocr()\033[0m')
     is_need_redo_ocr = False
     is_form_sumbited = False
 
@@ -2139,9 +2146,12 @@ def tixcraft_auto_ocr(driver, ocr, away_from_keyboard_enable, previous_answer, C
             ocr_answer = ocr_answer.strip()
             if show_debug_message:
                 print("ocr_answer:", ocr_answer)
+            time.sleep(5)
             if len(ocr_answer)==4:
+                print(f'\033[32mExecute chrome_tixcraft.py line 2150\033[0m')
                 who_care_var, is_form_sumbited = tixcraft_keyin_captcha_code(driver, answer = ocr_answer, auto_submit = away_from_keyboard_enable)
             else:
+                print(f'\033[32mExecute chrome_tixcraft.py line 2153\033[0m')
                 if not away_from_keyboard_enable:
                     tixcraft_keyin_captcha_code(driver)
                     tixcraft_toast(driver, "※ OCR辨識失敗Q_Q，驗證碼請手動輸入...")
@@ -5918,6 +5928,7 @@ def ticketmaster_assign_ticket_number(driver, config_dict):
 def ticketmaster_captcha(driver, config_dict, ocr, Captcha_Browser, domain_name):
     show_debug_message = True       # debug.
     show_debug_message = False      # online
+    print(f'\033[32mExecute chrome_tixcraft.py line 5925 ticketmaster_captcha()\033[0m')
 
     if config_dict["advanced"]["verbose"]:
         show_debug_message = True
@@ -5941,6 +5952,7 @@ def ticketmaster_captcha(driver, config_dict, ocr, Captcha_Browser, domain_name)
             is_need_redo_ocr, previous_answer, is_form_sumbited = tixcraft_auto_ocr(driver, ocr, away_from_keyboard_enable, previous_answer, Captcha_Browser, ocr_captcha_image_source, domain_name)
             if is_form_sumbited:
                 # start next loop.
+                print(f'\033[32mExecute chrome_tixcraft.py line 5949 is_form_submited\033[0m')
                 break
 
             if not away_from_keyboard_enable:
@@ -10903,7 +10915,12 @@ def main(args):
     Captcha_Browser = None
     try:
         if config_dict["ocr_captcha"]["enable"]:
+            print(f'\033[32mExecute chrome_tixcraft.py line 10907 assign ocr\033[0m')
             ocr = ddddocr.DdddOcr(show_ad=False, beta=config_dict["ocr_captcha"]["beta"])
+            if not ocr is None:
+                print(f'ocr version: {ocr.version()}')
+            else:
+                print("ocr is None")
             Captcha_Browser = NonBrowser()
             if len(config_dict["advanced"]["tixcraft_sid"]) > 1:
                 set_non_browser_cookies(driver, config_dict["homepage"], Captcha_Browser)
@@ -11084,6 +11101,7 @@ def test_captcha_model():
     answer_list = util.get_answer_list_from_question_string(None, captcha_text_div_text)
     print("answer_list:", answer_list)
 
+    print(f'\033[32mExecute chrome_tixcraft.py line 11089 assign ocr\033[0m')
     ocr = ddddocr.DdddOcr(show_ad=False, beta=True)
     image_file = 'captcha-xxxx.png'
     if os.path.exists(image_file):
