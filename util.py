@@ -1281,44 +1281,42 @@ def get_matched_blocks_by_keyword_item_set(config_dict, auto_select_mode, keywor
     return matched_blocks
 
 def get_target_item_from_matched_list(matched_blocks, auto_select_mode):
+    if matched_blocks is None:
+        return None
+
     target_area = None
-    if not matched_blocks is None:
-        matched_blocks_count = len(matched_blocks)
-        if matched_blocks_count > 0:
-            target_row_index = 0
+    matched_blocks_count = len(matched_blocks)
+    if matched_blocks_count > 0:
+        target_row_index = 0
 
-            if auto_select_mode == CONST_FROM_TOP_TO_BOTTOM:
-                pass
+        # if auto_select_mode == CONST_FROM_TOP_TO_BOTTOM:
+        #     pass
 
-            if auto_select_mode == CONST_FROM_BOTTOM_TO_TOP:
-                target_row_index = matched_blocks_count - 1
+        if auto_select_mode == CONST_FROM_BOTTOM_TO_TOP:
+            target_row_index = matched_blocks_count - 1
 
-            if auto_select_mode == CONST_RANDOM:
-                if matched_blocks_count > 1:
-                    target_row_index = random.randint(0,matched_blocks_count-1)
+        if auto_select_mode == CONST_RANDOM and matched_blocks_count > 1:
+                target_row_index = random.randint(0,matched_blocks_count-1)
 
-            if auto_select_mode == CONST_CENTER:
-                if matched_blocks_count > 2:
-                    target_row_index = int(matched_blocks_count/2)
+        if auto_select_mode == CONST_CENTER and matched_blocks_count > 2:
+                target_row_index = int(matched_blocks_count/2)
 
-            target_area = matched_blocks[target_row_index]
+        target_area = matched_blocks[target_row_index]
     return target_area
 
 
 def get_matched_blocks_by_keyword(config_dict, auto_select_mode, keyword_string, formated_area_list):
-    keyword_array = []
     try:
         # keyword_array = json.loads("["+ keyword_string +"]")
         keyword_array = orjson.loads("["+ keyword_string +"]")
-    except Exception as exc:
-        keyword_array = []
+    except orjson.JSONDecodeError:
+        return []
 
-    matched_blocks = []
     for keyword_item_set in keyword_array:
         matched_blocks = get_matched_blocks_by_keyword_item_set(config_dict, auto_select_mode, keyword_item_set, formated_area_list)
-        if len(matched_blocks) > 0:
-            break
-    return matched_blocks
+        if matched_blocks:
+            return matched_blocks
+    return []
 
 
 def is_row_match_keyword(keyword_string, row_text):
