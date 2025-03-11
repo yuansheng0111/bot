@@ -477,6 +477,18 @@ def get_uc_options(uc, config_dict, webdriver_path):
     return options
 
 def load_chromdriver_uc(config_dict):
+    """
+    Load a undetected chrome driver according to the config_dict.
+
+    This function try to download chromedriver if not exist, and use undetected_chromedriver to launch chrome browser. If fail, it will try to use local chromedriver to launch
+    chrome browser.
+
+    Args:
+        config_dict: the config_dict from the config file.
+
+    Returns:
+        a undetected chrome driver object, or None if fail.
+    """
     import undetected_chromedriver as uc
 
     show_debug_message = True       # debug.
@@ -511,9 +523,7 @@ def load_chromdriver_uc(config_dict):
 
         fail_1 = False
         lanch_uc_with_path = True
-        if "macos" in platform.platform().lower():
-            # if "arm64" in platform.platform().lower():
-            if util.is_arm():
+        if "macos" in platform.platform().lower() and util.is_arm():
                 lanch_uc_with_path = False
 
         if lanch_uc_with_path:
