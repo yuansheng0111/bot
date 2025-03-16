@@ -491,11 +491,11 @@ def load_chromdriver_uc(config_dict):
     """
     import undetected_chromedriver as uc
 
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
+    # show_debug_message = True       # debug.
+    # show_debug_message = False      # online
 
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
+    # if config_dict["advanced"]["verbose"]:
+    #     show_debug_message = True
 
     Root_Dir = util.get_app_root()
     webdriver_path = os.path.join(Root_Dir, "webdriver")
@@ -519,7 +519,7 @@ def load_chromdriver_uc(config_dict):
     driver = None
     if os.path.exists(chromedriver_path):
         # use chromedriver_autodownload instead of uc auto download.
-        is_cache_exist =  util.clean_uc_exe_cache()
+        # is_cache_exist =  util.clean_uc_exe_cache()
 
         fail_1 = False
         lanch_uc_with_path = True
