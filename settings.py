@@ -20,7 +20,7 @@ try:
 except Exception as exc:
     pass
 
-CONST_APP_VERSION = "MaxBot (2025.02.14)"
+CONST_APP_VERSION = "MaxBot (2025.03.17)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -32,21 +32,15 @@ CONST_MAXBOT_QUESTION_FILE = "MAXBOT_QUESTION.txt"
 
 CONST_SERVER_PORT = 16888
 
-CONST_FROM_TOP_TO_BOTTOM = "from top to bottom"
-CONST_FROM_BOTTOM_TO_TOP = "from bottom to top"
-CONST_CENTER = "center"
 CONST_RANDOM = "random"
 CONST_SELECT_ORDER_DEFAULT = CONST_RANDOM
 CONST_EXCLUDE_DEFAULT = "\"輪椅\",\"身障\",\"身心 障礙\",\"Restricted View\",\"燈柱遮蔽\",\"視線不完整\""
 CONST_CAPTCHA_SOUND_FILENAME_DEFAULT = "assets/ding-dong.wav"
 CONST_HOMEPAGE_DEFAULT = "about:blank"
 
-CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER = "NonBrowser"
 CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS = "canvas"
 
-CONST_WEBDRIVER_TYPE_SELENIUM = "selenium"
 CONST_WEBDRIVER_TYPE_UC = "undetected_chromedriver"
-CONST_WEBDRIVER_TYPE_DP = "DrissionPage"
 CONST_WEBDRIVER_TYPE_NODRIVER = "nodriver"
 
 CONST_SUPPORTED_SITES = ["https://kktix.com"
@@ -71,12 +65,87 @@ CONST_SUPPORTED_SITES = ["https://kktix.com"
 
 URL_DONATE = 'https://max-everyday.com/about/#donate'
 URL_HELP = 'https://max-everyday.com/2018/03/tixcraft-bot/'
-URL_RELEASE = 'https://github.com/max32002/tixcraft_bot/releases'
-URL_FB = 'https://www.facebook.com/maxbot.ticket'
 URL_CHROME_DRIVER = 'https://chromedriver.chromium.org/'
 URL_FIREFOX_DRIVER = 'https://github.com/mozilla/geckodriver/releases'
 URL_EDGE_DRIVER = 'https://developer.microsoft.com/zh-tw/microsoft-edge/tools/webdriver/'
 
+
+def _get_default_config():
+    config = {
+        "homepage": CONST_HOMEPAGE_DEFAULT,
+        "browser": "chrome",
+        "language": "English",
+        "ticket_number": 2,
+        "ocr_captcha": {
+            "enable": True,
+            "beta": True,
+            "force_submit": True,
+            "image_source": CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS
+        },
+        "webdriver_type": CONST_WEBDRIVER_TYPE_UC,
+        "date_auto_select": {
+            "enable": True,
+            "date_keyword": "",
+            "mode": CONST_SELECT_ORDER_DEFAULT
+        },
+        "area_auto_select": {
+            "enable": True,
+            "mode": CONST_SELECT_ORDER_DEFAULT,
+            "area_keyword": ""
+        },
+        "keyword_exclude": CONST_EXCLUDE_DEFAULT,
+        "kktix": {
+            "auto_press_next_step_button": True,
+            "auto_fill_ticket_number": True,
+            "max_dwell_time": 60
+        },
+        "cityline": {
+            "cityline_queue_retry": True
+        },
+        "tixcraft": {
+            "pass_date_is_sold_out": True,
+            "auto_reload_coming_soon_page": True
+        },
+        "advanced": {
+            "play_sound": {
+                "ticket": False,
+                "order": False,
+                "filename": CONST_CAPTCHA_SOUND_FILENAME_DEFAULT
+            },
+            "accounts": {
+                "tixcraft_sid": "",
+                "ibonqware": "",
+                "facebook": {"account": "", "password": "", "password_plaintext": ""},
+                "kktix": {"account": "", "password": "", "password_plaintext": ""},
+                "fami": {"account": "", "password": "", "password_plaintext": ""},
+                "cityline": {"account": "", "password": "", "password_plaintext": ""},
+                "urbtix": {"account": "", "password": "", "password_plaintext": ""},
+                "hkticketing": {"account": "", "password": "", "password_plaintext": ""},
+                "kham": {"account": "", "password": "", "password_plaintext": ""},
+                "ticket": {"account": "", "password": "", "password_plaintext": ""},
+                "udn": {"account": "", "password": "", "password_plaintext": ""},
+                "ticketplus": {"account": "", "password": "", "password_plaintext": ""}
+            },
+            "chrome_extension": True,
+            "disable_adjacent_seat": False,
+            "hide_some_image": False,
+            "block_facebook_network": False,
+            "headless": False,
+            "verbose": False,
+            "auto_guess_options": True,
+            "user_guess_string": "",
+            "remote_url": f"\"http://127.0.0.1:{CONST_SERVER_PORT}/\"",
+            "auto_reload_page_interval": 0.1,
+            "reset_browser_interval": 0,
+            "proxy_server_port": "",
+            "window_size": "480,1024",
+            "idle_keyword": "",
+            "resume_keyword": "",
+            "idle_keyword_second": "",
+            "resume_keyword_second": ""
+        }
+    }
+    return config
 
 def get_default_config():
     config_dict={}
@@ -182,15 +251,15 @@ def get_default_config():
 
     return config_dict
 
-def read_last_url_from_file():
-    text = ""
+def read_last_url_from_file() -> str:
+    last_url = ""
     if os.path.exists(CONST_MAXBOT_LAST_URL_FILE):
         try:
-            with open(CONST_MAXBOT_LAST_URL_FILE, "r") as text_file:
-                text = text_file.readline()
-        except Exception as e:
+            with open(CONST_MAXBOT_LAST_URL_FILE, "r") as file:
+                last_url = file.readline().strip()
+        except Exception:  # pylint: disable=broad-except
             pass
-    return text
+    return last_url
 
 def load_json():
     app_root = util.get_app_root()
@@ -262,8 +331,8 @@ def maxbot_idle():
 def maxbot_resume():
     app_root = util.get_app_root()
     idle_filepath = os.path.join(app_root, CONST_MAXBOT_INT28_FILE)
-    for i in range(3):
-         util.force_remove_file(idle_filepath)
+    for _ in range(3):
+        util.force_remove_file(idle_filepath)
 
 def launch_maxbot():
     global launch_counter
@@ -280,18 +349,16 @@ def launch_maxbot():
         script_name = "nodriver_tixcraft"
 
     window_size = config_dict["advanced"]["window_size"]
-    if len(window_size) > 0:
-        if "," in window_size:
-            size_array = window_size.split(",")
-            target_width = int(size_array[0])
-            target_left = target_width * launch_counter
-            #print("target_left:", target_left)
-            if target_left >= 1440:
-                launch_counter = 0
-            window_size = window_size + "," + str(launch_counter)
-            #print("window_size:", window_size)
+    if window_size and "," in window_size:
+        width, _ = map(int, window_size.split(","))
+        left = width * launch_counter
+        if left >= 1440:
+            launch_counter = 0
+        window_size = f"{window_size},{launch_counter}"
+        #print("window_size:", window_size)
 
-    threading.Thread(target=util.launch_maxbot, args=(script_name,"","","","",window_size,)).start()
+    threading.Thread(target=util.launch_maxbot, args=(script_name, "", "", "", "", window_size,)).start()
+
 
 def change_maxbot_status_by_keyword():
     config_filepath, config_dict = load_json()
@@ -324,43 +391,36 @@ def change_maxbot_status_by_keyword():
             #print("match to resume:", current_time)
             maxbot_resume()
 
-def clean_extension_status():
-    Root_Dir = util.get_app_root()
-    webdriver_path = os.path.join(Root_Dir, "webdriver")
-    target_path = os.path.join(webdriver_path, CONST_MAXBOT_EXTENSION_NAME)
-    target_path = os.path.join(target_path, "data")
-    target_path = os.path.join(target_path, CONST_MAXBOT_EXTENSION_STATUS_JSON)
-    if os.path.exists(target_path):
+def clean_extension_status() -> None:
+    app_root = util.get_app_root()
+    webdriver_dir = os.path.join(app_root, "webdriver", CONST_MAXBOT_EXTENSION_NAME, "data")
+    status_file_path = os.path.join(webdriver_dir, CONST_MAXBOT_EXTENSION_STATUS_JSON)
+    
+    if os.path.exists(status_file_path):
         try:
-            os.unlink(target_path)
-        except Exception as exc:
-            print(exc)
-            pass
-
-def sync_status_to_extension(status):
-    Root_Dir = util.get_app_root()
-    webdriver_path = os.path.join(Root_Dir, "webdriver")
-    target_path = os.path.join(webdriver_path, CONST_MAXBOT_EXTENSION_NAME)
-    target_path = os.path.join(target_path, "data")
-    if os.path.exists(target_path):
-        target_path = os.path.join(target_path, CONST_MAXBOT_EXTENSION_STATUS_JSON)
-        #print("save as to:", target_path)
-        status_json={}
-        status_json["status"]=status
-        #print("dump json to path:", target_path)
-        try:
-            with open(target_path, "wb") as outfile:
-                outfile.write(orjson.dumps(status_json))
-            # with open(target_path, 'w') as outfile:
-            #     json.dump(status_json, outfile)
+            os.unlink(status_file_path)
         except Exception as e:
-            pass
+            print(f"Error removing status file: {e}")
+
+def sync_status_to_extension(status: str) -> None:
+    app_root = util.get_app_root()
+    webdriver_dir = os.path.join(app_root, "webdriver", CONST_MAXBOT_EXTENSION_NAME, "data")
+    status_file_path = os.path.join(webdriver_dir, CONST_MAXBOT_EXTENSION_STATUS_JSON)
+
+    if os.path.exists(webdriver_dir):
+        status_json = {"status": status}
+        try:
+            with open(status_file_path, "wb") as outfile:
+                outfile.write(orjson.dumps(status_json))
+        except Exception as e:
+            print(f"Error writing status to {status_file_path}: {e}")
 
 def clean_tmp_file():
-    remove_file_list = [CONST_MAXBOT_LAST_URL_FILE
-        ,CONST_MAXBOT_INT28_FILE
-        ,CONST_MAXBOT_ANSWER_ONLINE_FILE
-        ,CONST_MAXBOT_QUESTION_FILE
+    remove_file_list = [
+        CONST_MAXBOT_LAST_URL_FILE,
+        CONST_MAXBOT_INT28_FILE,
+        CONST_MAXBOT_ANSWER_ONLINE_FILE,
+        CONST_MAXBOT_QUESTION_FILE
     ]
     for filepath in remove_file_list:
          util.force_remove_file(filepath)
@@ -382,11 +442,9 @@ class ShutdownHandler(tornado.web.RequestHandler):
 
 class StatusHandler(tornado.web.RequestHandler):
     def get(self):
-        is_paused = False
-        if os.path.exists(CONST_MAXBOT_INT28_FILE):
-            is_paused = True
-        url = read_last_url_from_file()
-        self.write({"status": not is_paused, "last_url": url})
+        is_paused = os.path.exists(CONST_MAXBOT_INT28_FILE)
+        last_url = read_last_url_from_file()
+        self.write({"status": not is_paused, "last_url": last_url})
 
 class PauseHandler(tornado.web.RequestHandler):
     def get(self):
@@ -423,31 +481,26 @@ class SaveJsonHandler(tornado.web.RequestHandler):
         error_message = ""
         error_code = 0
 
-        if is_pass_check:
+        try :
+            # _body = json.loads(self.request.body)
+            _body = orjson.loads(self.request.body)
+        except Exception:
+            error_message = "wrong json format"
+            error_code = 1002
             is_pass_check = False
-            try :
-                # _body = json.loads(self.request.body)
-                _body = orjson.loads(self.request.body)
-                is_pass_check = True
-            except Exception:
-                error_message = "wrong json format"
-                error_code = 1002
-                pass
 
         if is_pass_check:
             app_root = util.get_app_root()
             config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
             config_dict = encrypt_password(_body)
 
-            if config_dict["kktix"]["max_dwell_time"] > 0:
-                if config_dict["kktix"]["max_dwell_time"] < 15:
-                    # min value is 15 seconds.
-                    config_dict["kktix"]["max_dwell_time"] = 15
+            if config_dict["kktix"]["max_dwell_time"] > 0 and config_dict["kktix"]["max_dwell_time"] < 15:
+                # min value is 15 seconds.
+                config_dict["kktix"]["max_dwell_time"] = 15
 
-            if config_dict["advanced"]["reset_browser_interval"] > 0:
-                if config_dict["advanced"]["reset_browser_interval"] < 20:
-                    # min value is 20 seconds.
-                    config_dict["advanced"]["reset_browser_interval"] = 20
+            if config_dict["advanced"]["reset_browser_interval"] > 0 and config_dict["advanced"]["reset_browser_interval"] < 20:
+                # min value is 20 seconds.
+                config_dict["advanced"]["reset_browser_interval"] = 20
 
             # due to cloudflare.
             if ".cityline.com" in config_dict["homepage"]:
@@ -457,12 +510,13 @@ class SaveJsonHandler(tornado.web.RequestHandler):
 
         if not is_pass_check:
             self.set_status(401)
-            self.write(dict(error=dict(message=error_message,code=error_code)))
+            self.write(dict(error=dict(message=error_message, code=error_code)))
 
         self.finish()
 
 class OcrHandler(tornado.web.RequestHandler):
     def get(self):
+        
         self.write({"answer": "1234"})
 
     def post(self):
@@ -475,23 +529,20 @@ class OcrHandler(tornado.web.RequestHandler):
         errorMessage = ""
         errorCode = 0
 
-        if is_pass_check:
+        try :
+            # _body = json.loads(self.request.body)
+            _body = orjson.loads(self.request.body)
+        except Exception:
+            errorMessage = "wrong json format"
+            errorCode = 1001
             is_pass_check = False
-            try :
-                # _body = json.loads(self.request.body)
-                _body = orjson.loads(self.request.body)
-                is_pass_check = True
-            except Exception:
-                errorMessage = "wrong json format"
-                errorCode = 1001
-                pass
 
         img_base64 = None
         image_data = ""
         if is_pass_check:
             if 'image_data' in _body:
                 image_data = _body['image_data']
-                if len(image_data) > 0:
+                if image_data:
                     img_base64 = base64.b64decode(image_data)
             else:
                 errorMessage = "image_data not exist"
@@ -507,19 +558,18 @@ class OcrHandler(tornado.web.RequestHandler):
                 print("ocr_answer:", ocr_answer)
             except Exception as exc:
                 pass
-
+        print(f"In settings.py OcrHandler line 561")
         self.write({"answer": ocr_answer})
 
 class QueryHandler(tornado.web.RequestHandler):
     def format_config_keyword_for_json(self, user_input):
-        if len(user_input) > 0:
-            if not ('\"' in user_input):
-                user_input = '"' + user_input + '"'
+        if user_input and '"' not in user_input:
+            user_input = f'"{user_input}"'
         return user_input
 
     def compose_as_json(self, user_input):
-        user_input = self.format_config_keyword_for_json(user_input)
-        return "{\"data\":[%s]}" % user_input
+        formatted_input = self.format_config_keyword_for_json(user_input)
+        f'{{"data":[{formatted_input}]}}'
 
     def get(self):
         global txt_answer_value

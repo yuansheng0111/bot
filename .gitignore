@@ -6,3 +6,7 @@
 **/settings.json
 MAXBOT_LAST_URL.txt
 test.*
+
+.venv
+settings.json
+**/settings.json
