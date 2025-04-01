@@ -115,7 +115,7 @@ CONST_WEBDRIVER_TYPE_NODRIVER = "nodriver"
 CONST_CHROME_FAMILY = ["chrome","edge","brave"]
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 CONST_PREFS_DICT = {
-    "credentials_enable_service": False, 
+    "credentials_enable_service": False,
     "in_product_help.snoozed_feature.IPH_LiveCaption.is_dismissed": True,
     "in_product_help.snoozed_feature.IPH_LiveCaption.last_dismissed_by": 4,
     "media_router.show_cast_sessions_started_by_other_devices.enabled": False,
@@ -123,8 +123,8 @@ CONST_PREFS_DICT = {
     "privacy_guide.viewed": True,
     "profile.default_content_setting_values.notifications": 2,
     "profile.default_content_setting_values.sound": 2,
-    "profile.name": CONST_APP_VERSION, 
-    "profile.password_manager_enabled": False, 
+    "profile.name": CONST_APP_VERSION,
+    "profile.password_manager_enabled": False,
     "safebrowsing.enabled":False,
     "safebrowsing.enhanced":False,
     "sync.autofill_wallet_import_enabled_migrated":False,
@@ -1852,7 +1852,7 @@ def fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_li
                     if show_debug_message:
                         print(exc)
                     pass
-                
+
                 if is_button_clicked:
                     is_answer_sent = True
                     fail_list.append(inferred_answer_string)
@@ -2073,7 +2073,7 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
                 image_element = driver.find_elements(By.CSS_SELECTOR, my_css_selector)
             except Exception as exc:
                 pass
-            
+
 
             if not image_element is None:
                 if "indievox.com" in domain_name:
@@ -2510,190 +2510,151 @@ def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kk
 
     is_dom_ready = True
     price_list_count = 0
-    if not ticket_price_list is None:
+    if ticket_price_list:
         price_list_count = len(ticket_price_list)
         if show_debug_message:
             print("found price count:", price_list_count)
     else:
         is_dom_ready = False
         print("find ticket-price fail")
+        # return is_dom_ready, is_ticket_number_assigned, None
 
-    if price_list_count > 0:
-        areas = []
-
-        kktix_area_keyword_array = kktix_area_keyword.split(" ")
-        kktix_area_keyword_1 = kktix_area_keyword_array[0]
-        kktix_area_keyword_1_and = ""
-        if len(kktix_area_keyword_array) > 1:
-            kktix_area_keyword_1_and = kktix_area_keyword_array[1]
-
-        # clean stop word.
-        kktix_area_keyword_1 = util.format_keyword_string(kktix_area_keyword_1)
-        kktix_area_keyword_1_and = util.format_keyword_string(kktix_area_keyword_1_and)
-
-        if show_debug_message:
-            print("kktix_area_keyword_1:", kktix_area_keyword_1)
-            print("kktix_area_keyword_1_and:", kktix_area_keyword_1_and)
-
-        for row in ticket_price_list:
-            row_text = ""
-            row_html = ""
-            try:
-                #row_text = row.text
-                row_html = row.get_attribute("innerHTML")
-                row_text = util.remove_html_tags(row_html)
-            except Exception as exc:
-                is_dom_ready = False
-                if show_debug_message:
-                    print(exc)
-                # error, exit loop
-                break
-
-            if len(row_text) > 0:
-                if "未開賣" in row_text:
-                    row_text = ""
-
-                if "暫無票" in row_text:
-                    row_text = ""
-
-                if "已售完" in row_text:
-                    row_text = ""
-
-                if "Sold Out" in row_text:
-                    row_text = ""
-
-                if "完売" in row_text:
-                    row_text = ""
-
-                if not("<input type=" in row_html):
-                    row_text = ""
-
-            if len(row_text) > 0:
-                if util.reset_row_text_if_match_keyword_exclude(config_dict, row_text):
-                    row_text = ""
-
-            if len(row_text) > 0:
-                # clean stop word.
-                row_text = util.format_keyword_string(row_text)
-
-            if len(row_text) > 0:
-                if ticket_number > 1:
-                    # start to check danger notice.
-                    # 剩 n 張票 / n Left / 残り n 枚
-                    ticket_count = 999
-                    # for cht.
-                    if " danger" in row_html and "剩" in row_text and "張" in row_text:
-                        tmp_array = row_html.split("剩")
-                        tmp_array = tmp_array[1].split("張")
-                        if len(tmp_array) > 0:
-                            tmp_ticket_count = tmp_array[0].strip()
-                            if tmp_ticket_count.isdigit():
-                                ticket_count = int(tmp_ticket_count)
-                                if show_debug_message:
-                                    print("found ticket 剩:", tmp_ticket_count)
-                    # for ja.
-                    if " danger" in row_html and "残り" in row_text and "枚" in row_text:
-                        tmp_array = row_html.split("残り")
-                        tmp_array = tmp_array[1].split("枚")
-                        if len(tmp_array) > 0:
-                            tmp_ticket_count = tmp_array[0].strip()
-                            if tmp_ticket_count.isdigit():
-                                ticket_count = int(tmp_ticket_count)
-                                if show_debug_message:
-                                    print("found ticket 残り:", tmp_ticket_count)
-                    # for en.
-                    if " danger" in row_html and " Left " in row_html:
-                        tmp_array = row_html.split(" Left ")
-                        tmp_array = tmp_array[0].split(">")
-                        if len(tmp_array) > 0:
-                            tmp_ticket_count = tmp_array[len(tmp_array)-1].strip()
-                            if tmp_ticket_count.isdigit():
-                                if show_debug_message:
-                                    print("found ticket left:", tmp_ticket_count)
-                                ticket_count = int(tmp_ticket_count)
-
-                    if ticket_count < ticket_number:
-                        # skip this row, due to no ticket remaining.
-                        if show_debug_message:
-                            print("found ticket left:", tmp_ticket_count, ",but target ticket:", ticket_number)
-                        row_text = ""
-
-            if len(row_text) > 0:
-                # check ticket input textbox.
-                ticket_price_input = None
-                try:
-                    ticket_price_input = row.find_element(By.CSS_SELECTOR, "input[type='text']")
-                except Exception as exc:
-                    pass
-
-                if not ticket_price_input is None:
-                    current_ticket_number = ""
-                    is_visible = False
-
-                    try:
-                        current_ticket_number = str(ticket_price_input.get_attribute("value")).strip()
-                        is_visible = ticket_price_input.is_enabled()
-                    except Exception as exc:
-                        pass
-
-                    if len(current_ticket_number) > 0:
-                        if current_ticket_number != "0":
-                            is_ticket_number_assigned = True
-
-                    if is_ticket_number_assigned:
-                        # no need to travel
-                        break
-
-                    if is_visible:
-                        is_match_area = False
-                        match_area_code = 0
-
-                        if len(kktix_area_keyword_1) == 0:
-                            # keyword #1, empty, direct add to list.
-                            is_match_area = True
-                            match_area_code = 1
-                        else:
-                            # MUST match keyword #1.
-                            if kktix_area_keyword_1 in row_text:
-                                #print("match keyword#1")
-
-                                # because of logic between keywords is AND!
-                                if len(kktix_area_keyword_1_and) == 0:
-                                    #print("keyword#2 is empty, directly match.")
-                                    # keyword #2 is empty, direct append.
-                                    is_match_area = True
-                                    match_area_code = 2
-                                else:
-                                    if kktix_area_keyword_1_and in row_text:
-                                        #print("match keyword#2")
-                                        is_match_area = True
-                                        match_area_code = 3
-                                    else:
-                                        #print("not match keyword#2")
-                                        pass
-                            else:
-                                #print("not match keyword#1")
-                                pass
-
-                        if show_debug_message:
-                            print("is_match_area:", is_match_area)
-                            print("match_area_code:", match_area_code)
-
-                        if is_match_area:
-                            areas.append(ticket_price_input)
-
-                            # from top to bottom, match first to break.
-                            if kktix_area_auto_select_mode == CONST_FROM_TOP_TO_BOTTOM:
-                                break
-
-
-            if not is_dom_ready:
-                # not sure to break or continue..., maybe break better.
-                break
-    else:
+    if price_list_count == 0:
         if show_debug_message:
             print("no any price list found.")
-        pass
+        return is_dom_ready, is_ticket_number_assigned, None
+
+    # Pre-process keywords once instead of in each iteration
+    areas = []
+    # Optimize keyword processing
+    kktix_area_keywords = []
+    if kktix_area_keyword:
+        kktix_area_keyword_array = kktix_area_keyword.split(" ")
+        for keyword in kktix_area_keyword_array:
+            if keyword:
+                kktix_area_keywords.append(util.format_keyword_string(keyword))
+
+    if show_debug_message:
+        print("kktix_area_keywords:", kktix_area_keywords)
+
+    # Create a set of sold-out indicators for faster checking
+    sold_out_indicators = {"未開賣", "暫無票", "已售完", "Sold Out", "完売"}
+
+    # Process all rows
+    for row in ticket_price_list:
+        # Skip processing if we already found what we need
+        # if is_ticket_number_assigned:
+        #     break
+
+        row_text = ""
+        row_html = ""
+        try:
+            # Get HTML content once and reuse
+            row_html = row.get_attribute("innerHTML")
+            row_text = util.remove_html_tags(row_html)
+        except Exception as exc:
+            is_dom_ready = False
+            if show_debug_message:
+                print(exc)
+            break
+
+        # Quick check for input field before processing text
+        if not("<input type=" in row_html):
+            continue
+
+        # Early filtering for sold-out tickets
+        if any(indicator in row_text for indicator in sold_out_indicators):
+            continue
+
+        # Apply keyword exclusion
+        if util.reset_row_text_if_match_keyword_exclude(config_dict, row_text):
+            continue
+
+        # Clean and format text once
+        row_text = util.format_keyword_string(row_text)
+        if not row_text:
+            continue
+
+        # Check ticket count for multi-ticket requests
+        if ticket_number > 1:
+            # Optimize ticket count checking
+            ticket_count = 999
+
+            # Check for limited tickets in different languages
+            if " danger" in row_html:
+                # For Chinese
+                if "剩" in row_text and "張" in row_text:
+                    try:
+                        tmp_array = row_html.split("剩")[1].split("張")
+                        tmp_ticket_count = tmp_array[0].strip()
+                        if tmp_ticket_count.isdigit():
+                            ticket_count = int(tmp_ticket_count)
+                    except:
+                        pass
+
+                # For Japanese
+                elif "残り" in row_text and "枚" in row_text:
+                    try:
+                        tmp_array = row_html.split("残り")[1].split("枚")
+                        tmp_ticket_count = tmp_array[0].strip()
+                        if tmp_ticket_count.isdigit():
+                            ticket_count = int(tmp_ticket_count)
+                    except:
+                        pass
+
+                # For English
+                elif " Left " in row_html:
+                    try:
+                        tmp_array = row_html.split(" Left ")[0].split(">")
+                        tmp_ticket_count = tmp_array[-1].strip()
+                        if tmp_ticket_count.isdigit():
+                            ticket_count = int(tmp_ticket_count)
+                    except:
+                        pass
+
+            # Skip if not enough tickets available
+            if ticket_count < ticket_number:
+                continue
+
+        # Get ticket input field - only do this for rows that passed all filters
+        ticket_price_input = None
+        try:
+            ticket_price_input = row.find_element(By.CSS_SELECTOR, "input[type='text']")
+        except Exception as exc:
+            continue
+
+        if not ticket_price_input:
+            continue
+
+        # Check if ticket is already assigned
+        current_ticket_number = ""
+        is_visible = False
+        try:
+            current_ticket_number = str(ticket_price_input.get_attribute("value")).strip()
+            is_visible = ticket_price_input.is_enabled()
+        except:
+            continue
+
+        if current_ticket_number and current_ticket_number != "0":
+            is_ticket_number_assigned = True
+            break
+
+        if not is_visible:
+            continue
+
+        # Check if area matches keywords
+        is_match_area = True
+
+        # If keywords specified, check for matches
+        if kktix_area_keywords:
+            is_match_area = all(keyword in row_text for keyword in kktix_area_keywords)
+
+        if is_match_area:
+            areas.append(ticket_price_input)
+
+            # From top to bottom, match first to break
+            if kktix_area_auto_select_mode == CONST_FROM_TOP_TO_BOTTOM:
+                break
 
     return is_dom_ready, is_ticket_number_assigned, areas
 
@@ -4724,7 +4685,7 @@ def cityline_purchase_button_press(driver, config_dict):
 
     if show_debug_message:
         print("date_keyword:", date_keyword)
-    
+
     is_date_assign_by_bot = cityline_date_auto_select(driver, date_auto_select_mode, date_keyword, auto_reload_coming_soon_page_enable)
 
     is_button_clicked = False
@@ -8376,10 +8337,10 @@ def hkam_date_auto_select(driver, domain_name, config_dict):
     try:
         # for kham.com
         my_css_selector = "table.eventTABLE > tbody > tr"
-        
+
         if "ticket.com" in domain_name:
             my_css_selector = "div.description > table.table.table-striped.itable > tbody > tr"
-        
+
         if "udnfunlife.com" in domain_name:
             my_css_selector = "div.yd_session-block"
 
@@ -8446,7 +8407,7 @@ def hkam_date_auto_select(driver, domain_name, config_dict):
                     else:
                         # kham.
                         price_disabled_html = '"lightblue"'
-                        
+
                         if "ticket.com" in domain_name:
                             price_disabled_html = "<del>"
 

@@ -235,7 +235,7 @@ def get_default_config():
     config_dict["advanced"]["verbose"] = False
     config_dict["advanced"]["auto_guess_options"] = True
     config_dict["advanced"]["user_guess_string"] = ""
-    
+
     # remote_url not under ocr, due to not only support ocr features.
     config_dict["advanced"]["remote_url"] = "\"http://127.0.0.1:%d/\"" % (CONST_SERVER_PORT)
 
@@ -343,7 +343,7 @@ def launch_maxbot():
 
     config_filepath, config_dict = load_json()
     config_dict = decrypt_password(config_dict)
-    
+
     script_name = "chrome_tixcraft"
     if config_dict["webdriver_type"] == CONST_WEBDRIVER_TYPE_NODRIVER:
         script_name = "nodriver_tixcraft"
@@ -378,7 +378,7 @@ def change_maxbot_status_by_keyword():
         if is_matched:
             #print("match to resume:", current_time)
             maxbot_resume()
-    
+
     current_time = system_clock_data.strftime('%S')
     if len(config_dict["advanced"]["idle_keyword_second"]) > 0:
         is_matched =  util.is_text_match_keyword(config_dict["advanced"]["idle_keyword_second"], current_time)
@@ -395,7 +395,7 @@ def clean_extension_status() -> None:
     app_root = util.get_app_root()
     webdriver_dir = os.path.join(app_root, "webdriver", CONST_MAXBOT_EXTENSION_NAME, "data")
     status_file_path = os.path.join(webdriver_dir, CONST_MAXBOT_EXTENSION_STATUS_JSON)
-    
+
     if os.path.exists(status_file_path):
         try:
             os.unlink(status_file_path)
@@ -423,7 +423,7 @@ def clean_tmp_file():
         CONST_MAXBOT_QUESTION_FILE
     ]
     for filepath in remove_file_list:
-         util.force_remove_file(filepath)
+        util.force_remove_file(filepath)
 
 class QuestionHandler(tornado.web.RequestHandler):
     def get(self):
@@ -516,7 +516,7 @@ class SaveJsonHandler(tornado.web.RequestHandler):
 
 class OcrHandler(tornado.web.RequestHandler):
     def get(self):
-        
+
         self.write({"answer": "1234"})
 
     def post(self):
@@ -599,7 +599,7 @@ async def main_server():
         ("/pause", PauseHandler),
         ("/resume", ResumeHandler),
         ("/run", RunHandler),
-        
+
         # json api
         ("/load", LoadJsonHandler),
         ("/save", SaveJsonHandler),
@@ -629,7 +629,7 @@ def web_server():
     else:
         print("port:", CONST_SERVER_PORT, " is in used.")
 
-def settgins_gui_timer():
+def settings_gui_timer():
     while True:
         change_maxbot_status_by_keyword()
         time.sleep(0.4)
@@ -639,10 +639,10 @@ def settgins_gui_timer():
 if __name__ == "__main__":
     global GLOBAL_SERVER_SHUTDOWN
     GLOBAL_SERVER_SHUTDOWN = False
-    
-    threading.Thread(target=settgins_gui_timer, daemon=True).start()
+
+    threading.Thread(target=settings_gui_timer, daemon=True).start()
     threading.Thread(target=web_server, daemon=True).start()
-    
+
     clean_tmp_file()
     clean_extension_status()
 
