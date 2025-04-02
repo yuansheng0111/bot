@@ -547,7 +547,8 @@ def dump_settings_to_maxblock_plus_extension(
     config_file_path = os.path.join(data_path, CONST_MAXBOT_CONFIG_FILE)
 
     try:
-        config_file_path.unlink(missing_ok=True)  # Delete file if it exists (Python 3.8+)
+        if os.path.exists(config_file_path):
+            os.remove(config_file_path)  # Delete file if it exists
     except Exception as err:
         print(f"Error removing file {config_file_path}: {err}")
 
@@ -2002,11 +2003,11 @@ def launch_maxbot(script_name="chrome_tixcraft", filename="", homepage="", kktix
         print("execute in shell mode.")
 
         try:
-            print('try', interpreter_binary)
+            # print('try', interpreter_binary)
             cmd_array = [interpreter_binary, script_name + '.py'] + cmd_argument
             s=subprocess.Popen(cmd_array, cwd=working_dir)
         except Exception as exc:
-            print('try', interpreter_binary_alt)
+            # print('try', interpreter_binary_alt)
             try:
                 cmd_array = [interpreter_binary_alt, script_name + '.py'] + cmd_argument
                 s=subprocess.Popen(cmd_array, cwd=working_dir)

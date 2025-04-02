@@ -20,7 +20,6 @@ try:
 except Exception as exc:
     pass
 
-CONST_APP_VERSION = "MaxBot (2025.03.17)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -611,7 +610,7 @@ async def main_server():
         ('/(.*)', StaticFileHandler, {"path": os.path.join(".", 'www/')}),
     ])
     app.ocr = ocr;
-    app.version = CONST_APP_VERSION;
+    app.version = "Maxbot v1.0.0";
 
     app.listen(CONST_SERVER_PORT)
     print("server running on port:", CONST_SERVER_PORT)

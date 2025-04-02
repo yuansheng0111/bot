@@ -6,6 +6,7 @@
 #import nodriver as uc
 import argparse
 import base64
+import random
 import orjson
 import logging
 import os
@@ -41,8 +42,6 @@ try:
 except Exception as exc:
     print(exc)
     pass
-
-CONST_APP_VERSION = "MaxBot (2025.02.14)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -123,7 +122,6 @@ CONST_PREFS_DICT = {
     "privacy_guide.viewed": True,
     "profile.default_content_setting_values.notifications": 2,
     "profile.default_content_setting_values.sound": 2,
-    "profile.name": CONST_APP_VERSION,
     "profile.password_manager_enabled": False,
     "safebrowsing.enabled":False,
     "safebrowsing.enhanced":False,
@@ -501,6 +499,11 @@ def load_chromdriver_uc(config_dict):
     webdriver_path = os.path.join(Root_Dir, "webdriver")
     chromedriver_path = get_chromedriver_path(webdriver_path)
 
+    print(f"[\033[32mDEBUG\033[0m] webdriver_path: {webdriver_path}")
+    # /Users/yuansheng/Github/tix_bot/webdriver
+    print(f"[\033[32mDEBUG\033[0m] chromedriver_path: {chromedriver_path}")
+    # /Users/yuansheng/Github/tix_bot/webdriver/chromedriver
+
     if not os.path.exists(webdriver_path):
         os.mkdir(webdriver_path)
 
@@ -512,7 +515,7 @@ def load_chromdriver_uc(config_dict):
                 print("check installed chrome version fail, download last known good version.")
                 chromedriver_autoinstaller_max.install(path=webdriver_path, make_version_dir=False, detect_installed_version=False)
         except Exception as exc:
-            print(exc)
+            print(f"[\033[31mERROR\033[0m] Download chromedriver fail: {exc}")
     else:
         print("ChromeDriver exist:", chromedriver_path)
 
@@ -557,7 +560,7 @@ def load_chromdriver_uc(config_dict):
         if fail_2:
             # remove exist chromedriver, download again.
             try:
-                print("Deleting exist and download ChromeDriver again.")
+                print("Deleting exist chromedriver and download ChromeDriver again.")
                 os.unlink(chromedriver_path)
             except Exception as exc2:
                 print(exc2)
@@ -577,7 +580,9 @@ def load_chromdriver_uc(config_dict):
         print("WebDriver object is still None..., try download by uc.")
         try:
             options = get_uc_options(uc, config_dict, webdriver_path)
-            driver = uc.Chrome(options=options)
+            # When using uc.Chrome without a path, specify the version to avoid auto-detection
+            print("Using uc.Chrome without path, setting version to 134")
+            driver = uc.Chrome(options=options, version_main=134)
         except Exception as exc:
             print(exc)
             error_message = str(exc)
@@ -624,7 +629,6 @@ def get_driver_by_config(config_dict):
 
     # output config:
     print("current time:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    print("maxbot app version:", CONST_APP_VERSION)
     print("python version:", platform.python_version())
     print("platform:", platform.platform())
     print("homepage:", homepage)
@@ -2456,6 +2460,7 @@ def kktix_events_press_next_button(driver):
 
 #   : This is for case-2 next button.
 def kktix_press_next_button(driver):
+    time.sleep(random.uniform(0.1, 0.4))
     ret = False
 
     css_select = "div.register-new-next-button-area > button"
@@ -2466,7 +2471,7 @@ def kktix_press_next_button(driver):
         print(exc)
         pass
 
-    if not but_button_list is None:
+    if but_button_list:
         button_count = len(but_button_list)
         #print("button_count:",button_count)
         if button_count > 0:
@@ -2723,16 +2728,16 @@ def kktix_check_agree_checkbox(driver, config_dict):
     is_finish_checkbox_click = False
     is_dom_ready = False
     try:
-        html_body = driver.page_source
-        #print("html_body:",len(html_body))
-        if len(html_body) > 0:
-            if not "{{'new.i_read_and_agree_to'" in html_body:
-                is_dom_ready = True
+        is_dom_ready = driver.execute_script("""
+            // Check if we're on the right page (without the template string)
+            if (document.body.innerHTML.indexOf("{{'new.i_read_and_agree_to'") >= 0) return false;
+            return true;
+        """)
     except Exception as exc:
         if show_debug_message:
             print(exc)
         pass
-
+    # is_dom_ready = True
     if is_dom_ready:
         is_finish_checkbox_click = check_checkbox(driver, By.CSS_SELECTOR, "#person_agree_terms")
 
@@ -2878,7 +2883,6 @@ def kktix_reg_captcha(driver, config_dict, fail_list, registrationsNewApp_div):
 
             # due multi next buttons(pick seats/best seats)
             kktix_press_next_button(driver)
-            time.sleep(0.5)
 
             fail_list.append(inferred_answer_string)
         #print("new fail_list:", fail_list)
