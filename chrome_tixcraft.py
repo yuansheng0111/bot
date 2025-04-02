@@ -2431,6 +2431,7 @@ def tixcraft_ticket_main_ocr(driver, config_dict, ocr, Captcha_Browser, domain_n
                 break
 
 def kktix_confirm_order_button(driver):
+    print("kktix_confirm_order_button()")
     ret = False
 
     wait = WebDriverWait(driver, 1)
@@ -2455,11 +2456,13 @@ def kktix_confirm_order_button(driver):
 #   : 2: /events/xxx/registrations/new
 #   : This is ONLY for case-1, because case-2 lenght >5
 def kktix_events_press_next_button(driver):
+    print("kktix_events_press_next_button()")
     is_button_clicked = press_button(driver, By.CSS_SELECTOR,".tickets > a.btn-point")
     return is_button_clicked
 
 #   : This is for case-2 next button.
 def kktix_press_next_button(driver):
+    print("kktix_press_next_button()")
     time.sleep(random.uniform(0.1, 0.4))
     ret = False
 
@@ -2498,6 +2501,7 @@ def kktix_press_next_button(driver):
 
 
 def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kktix_area_keyword):
+    print("kktix_travel_price_list()")
     show_debug_message = config_dict["advanced"]["verbose"]
     ticket_number = config_dict["ticket_number"]
 
@@ -2664,6 +2668,7 @@ def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kk
     return is_dom_ready, is_ticket_number_assigned, areas
 
 def kktix_assign_ticket_number(driver, config_dict, kktix_area_keyword):
+    print("kktix_assign_ticket_number()")
     show_debug_message = config_dict["advanced"]["verbose"]
 
     ticket_number_str = str(config_dict["ticket_number"])
@@ -2737,6 +2742,8 @@ def kktix_check_agree_checkbox(driver, config_dict):
         if show_debug_message:
             print(exc)
         pass
+
+    print(f"kktix_check_agree_checkbox() {is_dom_ready}")
     # is_dom_ready = True
     if is_dom_ready:
         is_finish_checkbox_click = check_checkbox(driver, By.CSS_SELECTOR, "#person_agree_terms")
@@ -2745,6 +2752,7 @@ def kktix_check_agree_checkbox(driver, config_dict):
     return is_dom_ready, is_finish_checkbox_click
 
 def check_checkbox(driver, by, query):
+    print("check_checkbox()")
     show_debug_message = True       # debug.
     show_debug_message = False      # online
 
@@ -2756,13 +2764,14 @@ def check_checkbox(driver, by, query):
             print(exc)
         pass
     is_checkbox_checked = False
-    if not agree_checkbox is None:
+    if agree_checkbox:
         is_checkbox_checked = force_check_checkbox(driver, agree_checkbox)
     return is_checkbox_checked
 
 def force_check_checkbox(driver, agree_checkbox):
+    print("force_check_checkbox()")
     is_finish_checkbox_click = False
-    if not agree_checkbox is None:
+    if agree_checkbox:
         is_visible = False
         try:
             if agree_checkbox.is_enabled():
@@ -2796,6 +2805,7 @@ def force_check_checkbox(driver, agree_checkbox):
 
 # PS: no double check, NOW.
 def kktix_double_check_all_text_value(driver, ticket_number):
+    print("kktix_double_check_all_text_value()")
     is_do_press_next_button = False
 
     # double check ticket input textbox.
@@ -2829,6 +2839,7 @@ def kktix_double_check_all_text_value(driver, ticket_number):
     return is_do_press_next_button
 
 def set_kktix_control_label_text(driver, config_dict):
+    print("set_kktix_control_label_text()")
     fail_list = []
     answer_list = util.get_answer_list_from_user_guess_string(config_dict, CONST_MAXBOT_ANSWER_ONLINE_FILE)
     inferred_answer_string = ""
@@ -2844,6 +2855,7 @@ def set_kktix_control_label_text(driver, config_dict):
 
 
 def kktix_reg_captcha(driver, config_dict, fail_list, registrationsNewApp_div):
+    print("kktix_reg_captcha()")
     show_debug_message = config_dict["advanced"]["verbose"]
 
     answer_list = []
@@ -2890,6 +2902,7 @@ def kktix_reg_captcha(driver, config_dict, fail_list, registrationsNewApp_div):
     return fail_list, is_question_popup
 
 def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
+    print("kktix_reg_new_main()")
     show_debug_message = True       # debug.
     show_debug_message = False      # online
 
@@ -2909,7 +2922,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
 
     # part 2: assign ticket number
     is_ticket_number_assigned = False
-    if not registrationsNewApp_div is None:
+    if registrationsNewApp_div is not None:
         is_dom_ready = True
         is_need_refresh = False
 
@@ -2917,7 +2930,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
             area_keyword_array = []
             try:
                 # area_keyword_array = json.loads("["+ area_keyword +"]")
-                area_keyword_array = orjson.loads("["+ area_keyword +"]")
+                area_keyword_array = orjson.loads("[" + area_keyword +"]")
             except Exception as exc:
                 area_keyword_array = []
 
@@ -2961,6 +2974,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
 
                 # single option question
                 if not is_question_popup:
+                    print("kktix_main() not question popup")
                     # no captcha text popup, goto next page.
                     control_text = get_text_by_selector(driver, "div > div.code-input > div.control-group > label.control-label", "innerText")
                     if show_debug_message:
@@ -2990,6 +3004,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
                                 pass
 
                     if len(control_text) == 0:
+                        force_check_checkbox(driver, driver.find_element(By.CSS_SELECTOR, "#person_agree_terms"))
                         click_ret = kktix_press_next_button(driver)
                     else:
                         # input by maxbox plus extension.
@@ -3025,6 +3040,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
 
 
 def kktix_check_register_status(driver, url):
+    print("kktix_check_register_status()")
     event_code = util.kktix_get_event_code(url)
     if len(event_code) > 0:
         js = """
@@ -3071,6 +3087,7 @@ if (typeof $.kkUser.checked_status_register_code === "undefined") {
     return registerStatus
 
 def kktix_reg_auto_reload(driver, url, config_dict):
+    print("kktix_reg_auto_reload()")
     # auto reload javascrit code at chrome extension.
     is_reload_at_webdriver = False
     if not config_dict["browser"] in CONST_CHROME_FAMILY:
@@ -5289,6 +5306,7 @@ def facebook_login(driver, account, password):
     return is_password_sent
 
 def kktix_login(driver, account, password):
+    print("kktix_login()")
     ret = False
     # for like human.
     time.sleep(5)
@@ -6073,6 +6091,7 @@ def tixcraft_main(driver, url, config_dict, ocr, Captcha_Browser):
     return is_quit_bot
 
 def kktix_paused_main(driver, url, config_dict):
+    print("kktix_paused_main()")
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if "/users/sign_in?" in url:
@@ -6106,6 +6125,7 @@ def kktix_paused_main(driver, url, config_dict):
                 remove_attribute_tag_by_selector(driver, select_query, class_name)
 
 def kktix_main(driver, url, config_dict):
+    print("kktix_main() 6125")
     global kktix_dict
     if not "kktix_dict" in globals():
         kktix_dict = {}
@@ -6120,6 +6140,7 @@ def kktix_main(driver, url, config_dict):
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if "/users/sign_in?" in url:
+        print("kktix_main() /users/sign_in?")
         kktix_account = config_dict["advanced"]["kktix_account"]
         kktix_password = config_dict["advanced"]["kktix_password_plaintext"].strip()
         if kktix_password == "":
@@ -6129,6 +6150,7 @@ def kktix_main(driver, url, config_dict):
         is_url_contain_sign_in = True
 
     if not is_url_contain_sign_in:
+        print("kktix_main() /registrations/new")
         if "/registrations/new" in url:
             kktix_dict["start_time"] = time.time()
 
@@ -6138,7 +6160,7 @@ def kktix_main(driver, url, config_dict):
             is_dom_ready = False
             is_finish_checkbox_click = False
             is_dom_ready, is_finish_checkbox_click = kktix_check_agree_checkbox(driver, config_dict)
-
+            print(f"kktix_main() /registrations/new {is_dom_ready} {is_finish_checkbox_click}")
             if not is_dom_ready:
                 # reset answer fail list.
                 kktix_dict["fail_list"] = []
