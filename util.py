@@ -59,7 +59,7 @@ def remove_html_tags(text: str) -> str:
 
     html_tag_pattern = re.compile('<.*?>')
     cleaned_text = re.sub(html_tag_pattern, '', text).strip()
-    
+
     return cleaned_text
 
 # common functions.
@@ -144,7 +144,7 @@ def format_config_keyword_for_json(config_keyword: str) -> str:
     """
     if not (config_keyword.startswith('"') and config_keyword.endswith('"')):
         config_keyword = f'"{config_keyword}"'
-        
+
     try:
         json_data = orjson.loads(config_keyword)
         if isinstance(json_data, dict) and json_data:
@@ -160,7 +160,7 @@ def is_text_match_keyword(keyword_string: str, text: str) -> bool:
     """
     Check if a given text matches any keyword in the keyword string.
 
-    The function parses the keyword string into an array of keywords and checks 
+    The function parses the keyword string into an array of keywords and checks
     if any keyword or set of keywords (separated by spaces) is present in the text.
 
     Args:
@@ -391,11 +391,11 @@ def synonym_dict(char):
 def chinese_numeric_to_int(chinese_character):
     chinese_character = chinese_character.lower()  # Convert once before loop
     chinese_to_int = get_chinese_numeric()
-    
+
     for int_value, chinese_characters in chinese_to_int.items():
         if chinese_character in chinese_characters:
             return int(int_value)
-    
+
     return None
 
 def normalize_chinese_numeric(keyword):
@@ -1906,65 +1906,54 @@ def get_answer_list_from_question_string(registrationsNewApp_div, captcha_text_d
 
     return answer_list
 
-def kktix_get_registerStatus(event_code):
-    html_result = None
+def kktix_get_registerStatus(event_code: str) -> str:
+    """
+    Fetch the registration status for a given event code from the KKTIX website.
 
-    url = "https://kktix.com/g/events/%s/register_info" % (event_code)
-    #print('event_code:',event_code)
-    #print("url:", url)
+    Args:
+        event_code (str): The unique event code for which to fetch the registration status.
 
-    headers = {"Accept-Language": "zh-TW,zh;q=0.5", 'User-Agent': USER_AGENT}
+    Returns:
+        str: The registration status of the event, or an empty string if the status could not be determined.
+    """
+    url = f"https://kktix.com/g/events/{event_code}/register_info"
+    headers = {
+        "Accept-Language": "zh-TW,zh;q=0.5",
+        'User-Agent': USER_AGENT
+    }
+
     try:
-        html_result = requests.get(url , headers=headers, timeout=0.7, allow_redirects=False)
+        response = requests.get(url, headers=headers, timeout=0.7, allow_redirects=False)
+        if response.status_code == 200:
+            data = orjson.loads(response.text)
+            return data.get('inventory', {}).get('registerStatus', "")
     except Exception as exc:
-        html_result = None
-        print("send reg_info request fail:")
-        print(exc)
+        print("Failed to fetch registration info:", exc)
 
-    registerStatus = ""
-    if not html_result is None:
-        status_code = html_result.status_code
-        #print("status_code:",status_code)
-        if status_code == 200:
-            html_text = html_result.text
-            #print("html_text:", html_text)
-            try:
-                # jsLoads = json.loads(html_text)
-                jsLoads = orjson.loads(html_text)
-                if 'inventory' in jsLoads:
-                    if 'registerStatus' in jsLoads['inventory']:
-                        registerStatus = jsLoads['inventory']['registerStatus']
-            except Exception as exc:
-                print("load reg_info json fail:")
-                print(exc)
-                pass
+    return ""
 
-    #print("registerStatus:", registerStatus)
-    return registerStatus
+def kktix_get_event_code(url: str) -> str:
+    """
+    Extract the event code from a given KKTIX registration URL.
 
-def kktix_get_event_code(url):
+    Args:
+        url (str): The URL of the registration page.
+
+    Returns:
+        str: The event code of the registration page, or an empty string if the event code could not be determined.
+    """
     event_code = ""
-    if '/registrations/new' in url:
-        prefix_list = ['.com/events/','.cc/events/']
-        postfix = '/registrations/new'
+    if "/registrations/new" in url:
+        prefixes = [".com/events/",".cc/events/"]
+        postfix = "/registrations/new"
 
-        for prefix in prefix_list:
-            event_code = find_between(url,prefix,postfix)
-            if len(event_code) > 0:
+        for prefix in prefixes:
+            event_code = find_between(url, prefix, postfix)
+            if event_code:
                 break
 
-    #print('event_code:',event_code)
+    #print('event_code:', event_code)
     return event_code
-
-def get_kktix_status_by_url(url):
-    registerStatus = ""
-    if len(url) > 0:
-        event_code = kktix_get_event_code(url)
-        #print(event_code)
-        if len(event_code) > 0:
-            registerStatus = kktix_get_registerStatus(event_code)
-            #print(registerStatus)
-    return registerStatus
 
 def launch_maxbot(script_name="chrome_tixcraft", filename="", homepage="", kktix_account = "", kktix_password="", window_size="", headless=""):
     cmd_argument = []
