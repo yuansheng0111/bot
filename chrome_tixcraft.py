@@ -941,36 +941,34 @@ selectSoldoutItems.forEach((eachItem) =>
         pass
 
 def press_button(driver, select_by, select_query, force_submit=True):
-    ret = False
+    is_clicked = False
     next_step_button = None
     try:
         next_step_button = driver.find_element(select_by, select_query)
-        if not next_step_button is None:
-            if next_step_button.is_enabled():
+        if not next_step_button is None and next_step_button.is_enabled():
                 next_step_button.click()
-                ret = True
+                is_clicked = True
     except Exception as exc:
         #print("find %s clickable Exception:" % (select_query))
         #print(exc)
-        pass
 
-        if force_submit:
-            if not next_step_button is None:
-                is_visible = False
+        if force_submit and not next_step_button is None:
+            is_visible = False
+            try:
+                if next_step_button.is_enabled():
+                    is_visible = True
+            except Exception as exc:
+                pass
+
+            if is_visible:
                 try:
-                    if next_step_button.is_enabled():
-                        is_visible = True
+                    driver.set_script_timeout(1)
+                    driver.execute_script("arguments[0].click();", next_step_button)
+                    is_clicked = True
                 except Exception as exc:
                     pass
 
-                if is_visible:
-                    try:
-                        driver.set_script_timeout(1)
-                        driver.execute_script("arguments[0].click();", next_step_button)
-                        ret = True
-                    except Exception as exc:
-                        pass
-    return ret
+    return is_clicked
 
 # close some div on home url.
 def tixcraft_home_close_window(driver):
@@ -2457,7 +2455,7 @@ def kktix_confirm_order_button(driver):
 #   : This is ONLY for case-1, because case-2 lenght >5
 def kktix_events_press_next_button(driver):
     print("kktix_events_press_next_button()")
-    is_button_clicked = press_button(driver, By.CSS_SELECTOR,".tickets > a.btn-point")
+    is_button_clicked = press_button(driver, By.CSS_SELECTOR, ".tickets > a.btn-point")
     return is_button_clicked
 
 #   : This is for case-2 next button.
@@ -2513,8 +2511,7 @@ def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kk
         ticket_price_list = driver.find_elements(By.CSS_SELECTOR, "div.display-table-row")
     except Exception as exc:
         ticket_price_list = None
-        print("find ticket-price Exception:")
-        print(exc)
+        print(f"find ticket-price Exception: {exc}")
         pass
 
     is_dom_ready = True
@@ -2728,6 +2725,25 @@ def kktix_assign_ticket_number(driver, config_dict, kktix_area_keyword):
 
 
 def kktix_check_agree_checkbox(driver, config_dict):
+    """
+    Checks and attempts to agree to terms on a KKTIX registration page.
+
+    This function verifies if the page is ready by checking for the absence of
+    a specific template string in the HTML. If the page is ready, it attempts
+    to click the "agree to terms" checkbox.
+
+    Args:
+        driver: The WebDriver instance controlling the browser.
+        config_dict: Configuration dictionary containing settings, including
+                     a verbosity flag under 'advanced'.
+
+    Returns:
+        A tuple (is_dom_ready, is_finish_checkbox_click):
+            - is_dom_ready: A boolean indicating if the page is ready.
+            - is_finish_checkbox_click: A boolean indicating if the checkbox
+              was successfully clicked.
+    """
+
     show_debug_message = config_dict["advanced"]["verbose"]
 
     is_finish_checkbox_click = False
@@ -2741,66 +2757,66 @@ def kktix_check_agree_checkbox(driver, config_dict):
     except Exception as exc:
         if show_debug_message:
             print(exc)
-        pass
+        return False, False
 
-    print(f"kktix_check_agree_checkbox() {is_dom_ready}")
-    # is_dom_ready = True
     if is_dom_ready:
         is_finish_checkbox_click = check_checkbox(driver, By.CSS_SELECTOR, "#person_agree_terms")
 
-    #print("status:", is_dom_ready, is_finish_checkbox_click)
     return is_dom_ready, is_finish_checkbox_click
 
 def check_checkbox(driver, by, query):
-    print("check_checkbox()")
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
+    """
+    Attempts to check a checkbox element on a webpage using a WebDriver.
 
-    agree_checkbox = None
+    Args:
+        driver: The WebDriver instance controlling the browser.
+        by: The WebDriver By object specifying how to find the checkbox element.
+        query: The query string to find the checkbox element.
+
+    Returns:
+        A boolean indicating whether the checkbox was successfully checked.
+    """
+    show_debug_message = False
+    checkbox_element = None
     try:
-        agree_checkbox = driver.find_element(by, query)
+        checkbox_element = driver.find_element(by, query)
     except Exception as exc:
         if show_debug_message:
-            print(exc)
-        pass
-    is_checkbox_checked = False
-    if agree_checkbox:
-        is_checkbox_checked = force_check_checkbox(driver, agree_checkbox)
-    return is_checkbox_checked
+            print(f"find checkbox element fail: {exc}")
+        return False
 
-def force_check_checkbox(driver, agree_checkbox):
-    print("force_check_checkbox()")
-    is_finish_checkbox_click = False
-    if agree_checkbox:
-        is_visible = False
+    if checkbox_element:
+        return force_check_checkbox(driver, checkbox_element)
+    return False
+
+def force_check_checkbox(driver, checkbox_element):
+    """
+    Attempts to check a checkbox element on a webpage using a WebDriver.
+
+    This function first attempts to click the checkbox element directly. If that
+    fails, it uses JavaScript execution via the WebDriver to click the checkbox.
+
+    Args:
+        driver: The WebDriver instance controlling the browser.
+        checkbox_element: The checkbox WebElement to be checked.
+
+    Returns:
+        bool: True if the checkbox was successfully checked, False otherwise.
+    """
+
+    is_checked = False
+    try:
+        if checkbox_element.is_enabled():
+            if not checkbox_element.is_selected():
+                checkbox_element.click()
+            is_checked = True
+    except Exception:
         try:
-            if agree_checkbox.is_enabled():
-                is_visible = True
-        except Exception as exc:
+            driver.execute_script("arguments[0].click();", checkbox_element)
+            is_checked = True
+        except Exception:
             pass
-
-        if is_visible:
-            is_checkbox_checked = False
-            try:
-                if agree_checkbox.is_selected():
-                    is_checkbox_checked = True
-            except Exception as exc:
-                pass
-
-            if not is_checkbox_checked:
-                #print("send check to checkbox")
-                try:
-                    agree_checkbox.click()
-                    is_finish_checkbox_click = True
-                except Exception as exc:
-                    try:
-                        driver.execute_script("arguments[0].click();", agree_checkbox)
-                        is_finish_checkbox_click = True
-                    except Exception as exc:
-                        pass
-            else:
-                is_finish_checkbox_click = True
-    return is_finish_checkbox_click
+    return is_checked
 
 
 # PS: no double check, NOW.
@@ -2974,7 +2990,6 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
 
                 # single option question
                 if not is_question_popup:
-                    print("kktix_main() not question popup")
                     # no captcha text popup, goto next page.
                     control_text = get_text_by_selector(driver, "div > div.code-input > div.control-group > label.control-label", "innerText")
                     if show_debug_message:
@@ -3004,7 +3019,7 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
                                 pass
 
                     if len(control_text) == 0:
-                        force_check_checkbox(driver, driver.find_element(By.CSS_SELECTOR, "#person_agree_terms"))
+                        # force_check_checkbox(driver, driver.find_element(By.CSS_SELECTOR, "#person_agree_terms"))
                         click_ret = kktix_press_next_button(driver)
                     else:
                         # input by maxbox plus extension.
@@ -6125,7 +6140,6 @@ def kktix_paused_main(driver, url, config_dict):
                 remove_attribute_tag_by_selector(driver, select_query, class_name)
 
 def kktix_main(driver, url, config_dict):
-    print("kktix_main() 6125")
     global kktix_dict
     if not "kktix_dict" in globals():
         kktix_dict = {}
@@ -6140,7 +6154,6 @@ def kktix_main(driver, url, config_dict):
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if "/users/sign_in?" in url:
-        print("kktix_main() /users/sign_in?")
         kktix_account = config_dict["advanced"]["kktix_account"]
         kktix_password = config_dict["advanced"]["kktix_password_plaintext"].strip()
         if kktix_password == "":
@@ -6150,38 +6163,26 @@ def kktix_main(driver, url, config_dict):
         is_url_contain_sign_in = True
 
     if not is_url_contain_sign_in:
-        print("kktix_main() /registrations/new")
         if "/registrations/new" in url:
             kktix_dict["start_time"] = time.time()
 
             # call api, cuase add access log. DISABLE it.
             # kktix_reg_auto_reload(driver, url, config_dict)
 
-            is_dom_ready = False
-            is_finish_checkbox_click = False
             is_dom_ready, is_finish_checkbox_click = kktix_check_agree_checkbox(driver, config_dict)
-            print(f"kktix_main() /registrations/new {is_dom_ready} {is_finish_checkbox_click}")
             if not is_dom_ready:
-                # reset answer fail list.
                 kktix_dict["fail_list"] = []
                 kktix_dict["played_sound_ticket"] = False
-            else:
-                # check is able to buy.
-                if config_dict["kktix"]["auto_fill_ticket_number"]:
-                    kktix_dict["fail_list"], kktix_dict["played_sound_ticket"] = kktix_reg_new_main(driver, config_dict, kktix_dict["fail_list"], kktix_dict["played_sound_ticket"])
-                    kktix_dict["done_time"] = time.time()
+                return False
+            if config_dict["kktix"]["auto_fill_ticket_number"]:
+                kktix_dict["fail_list"], kktix_dict["played_sound_ticket"] = kktix_reg_new_main(driver, config_dict, kktix_dict["fail_list"], kktix_dict["played_sound_ticket"])
+                kktix_dict["done_time"] = time.time()
         else:
             is_event_page = False
-            if "/events/" in url:
-                # ex: https://xxx.kktix.cc/events/xxx-copy-1
-                if len(url.split("/"))<=5:
-                    is_event_page = True
-
-            if is_event_page:
-                if config_dict["kktix"]["auto_press_next_step_button"]:
-                    # pass switch check.
-                    #print("should press next here.")
-                    kktix_events_press_next_button(driver)
+            if "/events/" in url and len(url.split("/")) <= 5 and config_dict["kktix"]["auto_press_next_step_button"]:
+                # pass switch check.
+                #print("should press next here.")
+                kktix_events_press_next_button(driver)
 
             # reset answer fail list.
             kktix_dict["fail_list"] = []
@@ -6189,9 +6190,8 @@ def kktix_main(driver, url, config_dict):
 
     is_kktix_got_ticket = False
     if "/events/" in url and "/registrations/" in url and "-" in url:
-        if not "/registrations/new" in url:
-            if not "https://kktix.com/users/sign_in?" in url:
-                is_kktix_got_ticket = True
+        if not "/registrations/new" in url and not "https://kktix.com/users/sign_in?" in url:
+            is_kktix_got_ticket = True
 
     if is_kktix_got_ticket:
         if "/events/" in config_dict["homepage"] and "/registrations/" in config_dict["homepage"] and "-" in config_dict["homepage"]:
@@ -6205,12 +6205,11 @@ def kktix_main(driver, url, config_dict):
 
     is_quit_bot = False
     if is_kktix_got_ticket:
-        if not kktix_dict["start_time"] is None:
-            if not kktix_dict["done_time"] is None:
-                bot_elapsed_time = kktix_dict["done_time"] - kktix_dict["start_time"]
-                if kktix_dict["elapsed_time"] != bot_elapsed_time:
-                    print("bot elapsed time:", "{:.3f}".format(bot_elapsed_time))
-                kktix_dict["elapsed_time"] = bot_elapsed_time
+        if not kktix_dict["start_time"] is None and not kktix_dict["done_time"] is None:
+            bot_elapsed_time = kktix_dict["done_time"] - kktix_dict["start_time"]
+            if kktix_dict["elapsed_time"] != bot_elapsed_time:
+                print("bot elapsed time:", "{:.3f}".format(bot_elapsed_time))
+            kktix_dict["elapsed_time"] = bot_elapsed_time
 
         if config_dict["advanced"]["play_sound"]["order"]:
             if not kktix_dict["played_sound_order"]:
@@ -10788,11 +10787,11 @@ def get_current_url(driver):
             if window_handles_count >= 1:
                 driver.switch_to.window(driver.window_handles[0])
                 driver.switch_to.default_content()
-                time.sleep(0.2)
+                time.sleep(0.1)
         except Exception as excSwithFail:
             #print("excSwithFail:", excSwithFail)
             pass
-        if window_handles_count==0:
+        if window_handles_count == 0:
             try:
                 driver_log = driver.get_log("driver")[-1]["message"]
                 #print("get_log:", driver_log)
@@ -10899,7 +10898,7 @@ def main(args):
             if not config_dict["advanced"]["headless"]:
                 resize_window(driver, config_dict)
         else:
-            print("無法使用web driver，程式無法繼續工作")
+            print("無法使用 web driver，程式無法繼續工作")
             sys.exit()
     else:
         print("Load config error!")
@@ -10914,9 +10913,7 @@ def main(args):
         if config_dict["ocr_captcha"]["enable"]:
             print(f"\033[32mExecute chrome_tixcraft.py line 10907 assign ocr\033[0m")
             ocr = ddddocr.DdddOcr(show_ad=False, beta=config_dict["ocr_captcha"]["beta"])
-            if not ocr is None:
-                print(f"ocr version: {ocr.version()}")
-            else:
+            if ocr is None:
                 print("ocr is None")
             Captcha_Browser = NonBrowser()
             if len(config_dict["advanced"]["tixcraft_sid"]) > 1:
@@ -10928,7 +10925,7 @@ def main(args):
     maxbot_last_reset_time = time.time()
     is_quit_bot = False
     while True:
-        time.sleep(0.05)
+        time.sleep(0.04)
 
         # pass if driver not loaded.
         if driver is None:
@@ -10947,23 +10944,19 @@ def main(args):
                 pass
             break
 
-        if url is None:
+        if url is None or len(url) == 0:
             continue
-        else:
-            if len(url) == 0:
-                continue
 
         is_maxbot_paused = False
         if os.path.exists(CONST_MAXBOT_INT28_FILE):
             is_maxbot_paused = True
 
-        if len(url) > 0 :
-            if url != last_url:
-                print(url)
-                write_last_url_to_file(url)
-                if is_maxbot_paused:
-                    print("MAXBOT Paused.")
-            last_url = url
+        if url != last_url:
+            print(url)
+            write_last_url_to_file(url)
+            if is_maxbot_paused:
+                print("MAXBOT Paused.")
+        last_url = url
 
         if is_maxbot_paused:
             if "kktix.c" in url:
